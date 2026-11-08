@@ -499,7 +499,15 @@ Reglas:
     for (const t of tries){ if (!t) continue; try { return JSON.parse(t); } catch {} }
     throw {code:'invalid_json'};
   }
-  async function aiText(prompt, signal){
+  async function aiText(prompt, outer, ms){
+    const ctl = new AbortController(), signal = ctl.signal; let timedOut = false;
+    const to = setTimeout(() => { timedOut = true; ctl.abort(); }, ms || 70000);
+    if (outer) outer.addEventListener('abort', () => ctl.abort());
+    try { return await aiTextInner(prompt, signal); }
+    catch (e) { if (timedOut) throw {code:'timeout'}; throw e; }
+    finally { clearTimeout(to); }
+  }
+  async function aiTextInner(prompt, signal){
     const k = key(), body = JSON.stringify({model:'openai', messages:[{role:'user', content:prompt}], seed: Math.floor(Math.random() * 1e9)});
     const url = k ? 'https://gen.pollinations.ai/v1/chat/completions?key=' + encodeURIComponent(k) : 'https://text.pollinations.ai/openai';
     let res = null;
@@ -517,7 +525,8 @@ Reglas:
     try { const j = JSON.parse(raw); if (j && j.choices && j.choices[0]) txt = j.choices[0].message.content || ''; } catch {}
     return parseJSON(txt);
   }
-  const errMsg = e => e && e.code === 'limite' ? `Llegaste al límite gratis de la IA. Esperá unos ${e.wait || 20} segundos y probá de nuevo.`
+  const errMsg = e => e && e.code === 'timeout' ? 'La IA de texto gratis está tardando demasiado.'
+    : e && e.code === 'limite' ? `Llegaste al límite gratis de la IA. Esperá unos ${e.wait || 20} segundos y probá de nuevo.`
     : e && e.code === 'invalid_json' ? 'La IA respondió en un formato raro. Probá de nuevo.'
     : 'No se pudo conectar con la IA gratis. Revisá tu conexión y probá de nuevo.';
 
@@ -649,7 +658,7 @@ Reglas:
     const n = Number(opt.cantidad) || 10, rep = reparto(n), tanda = tandas + 1;
     const pedido = Object.entries(rep).filter(([, v]) => v).map(([k, v]) => `${v} con enfoque ${k}`).join(', ');
     const prev = ads.slice(0, 60).map(a => '- ' + a.h).join('\n') || '(ninguno todavía)';
-    const prompt = `${RULES}\n\nBRIEF DEL PRODUCTO:\n${brief()}\n\nGenerá exactamente ${n} anuncios NUEVOS para Meta Ads: ${pedido}${rep.urgencia ? ' (urgencia = miedo a perderse la oferta)' : ''}. Cada uno con un ángulo distinto; cambiá solo el enfoque, nunca el producto. Tanda ${tanda}: ángulos y titulares diferentes a todos los anteriores.\n\nTITULARES YA USADOS (no los repitas):\n${prev}\n\nRespondé SOLO con un array JSON de ${n} objetos con esta forma, sin texto antes ni después:\n${SCHEMA}`;
+    const prompt = `${RULES}\n\nBRIEF DEL PRODUCTO:\n${brief()}\n\nGenerá exactamente ${n} anuncios NUEVOS para Meta Ads: ${pedido}${rep.urgencia ? ' (urgencia = miedo a perderse la oferta)' : ''}. Cada uno con un ángulo distinto; cambiá solo el enfoque, nunca el producto. Tanda ${tanda}: ángulos y titulares diferentes a todos los anteriores.\n\nTITULARES YA USADOS (no los repitas):\n${prev}\n\nRespondé SOLO con un array JSON compacto (sin saltos de línea ni espacios extra) de ${n} objetos con esta forma, sin texto antes ni después:\n${SCHEMA}`;
     busy = new AbortController(); setBusy(true);
     status(`La IA está escribiendo ${n} anuncios nuevos… (puede tardar hasta un minuto)`, 'busy');
     try {
@@ -663,8 +672,7 @@ Reglas:
       renderAll(); persist(); nuevos.forEach(queueImage);
     } catch (e) {
       if (e && e.code === 'cancelled') status('Generación detenida.');
-      else if (e && e.code === 'limite') status(errMsg(e), 'err');
-      else { status(errMsg(e) + ' Mientras tanto usé textos de plantilla (las fotos sí son con IA).', 'err'); templateBatch(tanda, n); }
+      else { status(errMsg(e) + ' Armé los textos con plantillas y la IA está creando las fotos. Después podés tocar "Otro texto" en cada anuncio.', 'err'); templateBatch(tanda, n); }
     } finally { busy = null; setBusy(false); }
   }
   function templateBatch(tanda, n){
@@ -682,7 +690,7 @@ Reglas:
     const prompt = `${RULES}\n\nBRIEF DEL PRODUCTO:\n${brief()}\n\nEscribí UN anuncio nuevo para Meta Ads con enfoque ${a.enfoque}, con un ángulo distinto a "${a.nombre}". No repitas estos titulares:\n${ads.slice(0, 60).map(x => '- ' + x.h).join('\n')}\n\nRespondé SOLO con un objeto JSON con esta forma:\n${SCHEMA}`;
     busy = new AbortController(); setBusy(true); status('La IA está escribiendo otro texto para ' + a.id + '…', 'busy');
     try {
-      const o = await aiText(prompt, busy.signal), n = normalize(Array.isArray(o) ? o[0] : o, a.tanda, 0);
+      const o = await aiText(prompt, busy.signal, 50000), n = normalize(Array.isArray(o) ? o[0] : o, a.tanda, 0);
       ['nombre','kind','tag','h','s','cta','primary','title','button','hip','idea'].forEach(k => a[k] = n[k]);
       if (!a.layoutLocked) a.layout = n.layout;
       a.orig = snap(a); status('Texto nuevo listo para ' + a.id + '. Si querés una foto acorde, tocá "Otra foto".'); setTimeout(() => status(''), 4000);
@@ -919,7 +927,7 @@ Reglas:
   $('#btnTest').onclick = async () => {
     const out = $('#testOut'), btn = $('#btnTest'); out.hidden = false; btn.disabled = true; out.innerHTML = 'Probando la IA de texto…';
     let txt = '', img = '';
-    try { const r = await aiText('Respondé solo con este JSON: {"ok": true}'); txt = r && r.ok ? 'Texto: funciona.' : 'Texto: responde, pero raro.'; }
+    try { const r = await aiText('Respondé solo con este JSON: {"ok": true}', null, 40000); txt = r && r.ok ? 'Texto: funciona.' : 'Texto: responde, pero raro.'; }
     catch (e) { txt = 'Texto: ' + (e && e.code === 'limite' ? 'límite gratis alcanzado, esperá unos segundos.' : e && e.code === 'invalid_json' ? 'responde, pero en otro formato (igual se puede usar).' : 'no conecta.'); }
     out.innerHTML = esc(txt) + '<br>Probando la IA de imágenes… (puede tardar hasta un minuto)';
     const k = key(), u = k ? `https://gen.pollinations.ai/image/${encodeURIComponent('a red apple on a table, photo')}?width=256&height=256&seed=${Date.now() % 1e6}&model=flux&nologo=true&key=${encodeURIComponent(k)}` : `https://image.pollinations.ai/prompt/${encodeURIComponent('a red apple on a table, photo')}?width=256&height=256&seed=${Date.now() % 1e6}&model=flux&nologo=true`;
