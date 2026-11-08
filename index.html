@@ -509,9 +509,10 @@ Reglas:
   }
   async function aiTextInner(prompt, signal){
     const k = key(), body = JSON.stringify({model:'openai', messages:[{role:'user', content:prompt}], seed: Math.floor(Math.random() * 1e9)});
-    const url = k ? 'https://gen.pollinations.ai/v1/chat/completions?key=' + encodeURIComponent(k) : 'https://text.pollinations.ai/openai';
+    const url = k ? 'https://gen.pollinations.ai/v1/chat/completions' : 'https://text.pollinations.ai/openai';
+    const hdr = {'Content-Type':'application/json'}; if (k) hdr.Authorization = 'Bearer ' + k;
     let res = null;
-    try { res = await fetch(url, {method:'POST', headers:{'Content-Type':'application/json'}, body, signal}); }
+    try { res = await fetch(url, {method:'POST', headers: hdr, body, signal}); }
     catch (e) { if (signal && signal.aborted) throw {code:'cancelled'}; }
     if (res && (res.status === 402 || res.status === 429)) throw {code:'limite', wait: Number(res.headers.get('Retry-After')) || 20};
     if (!res || !res.ok){
@@ -550,16 +551,19 @@ Reglas:
       playa: `Uruguayan beach at golden hour, soft ${col} tones`,
       amigas: `cozy cafe terrace with friends, ${col} color accents`
     };
-    const persona = o.personas === 'dos' ? `two fictional women friends, one ${edad} with ${rulo} and ${piel}, both with defined curly hair` : `a fictional ${edad} woman with ${rulo} and ${piel}`;
-    const pote = o.pote === 'si' ? ', holding a plain unbranded cosmetic jar of curl cream near her face' : '';
-    const estilo = {editorial:'high-end beauty editorial advertising photograph', natural:'authentic natural lifestyle photograph', minimal:'clean minimalist beauty studio photograph'}[o.foto] || 'beauty advertising photograph';
+    const ropa = pick(['a colorful casual cotton t-shirt','a light linen button-up blouse','a cozy pastel knit sweater','a denim jacket over a white tee','a flowy summer blouse with sleeves'], s >> 9);
+    const persona = o.personas === 'dos' ? `two fictional smiling women friends in casual everyday clothes, one ${edad} with ${rulo} and ${piel}, both with defined curly hair` : `a fictional ${edad} woman with ${rulo} and ${piel}, wearing ${ropa}`;
+    const pote = o.pote === 'si' ? ', happily showing a small plain white jar of hair cream to the camera at chest height' : '';
+    const estilo = {editorial:'bright cheerful hair care advertising photo for a family-friendly cosmetics brand', natural:'bright authentic lifestyle photo for a hair care brand', minimal:'clean bright minimalist studio photo for a hair care brand'}[o.foto] || 'bright cheerful hair care advertising photo';
     const comp = a.layout === 'impacto' ? 'subject placed in the lower two thirds, calm empty background space at the top for a headline' : 'subject in the upper two thirds, calm empty space in the lower third for text';
-    return `${estilo} of ${persona}${pote}, ${a.idea || 'smiling and touching her curls'}, ${escenas[o.escena] || escenas.color}, ${comp}, photorealistic, glowing skin, soft natural light, sharp focus, vertical composition, no text, no letters, no logos, no watermark`;
+    return `${estilo} of ${persona}${pote}, ${ideaSegura(a.idea, a.seed)}, ${escenas[o.escena] || escenas.color}, ${comp}, warm genuine smile, friendly and confident, modest and fully clothed, focus on her healthy defined curly hair, real photograph of a real-looking person, natural skin texture with pores, natural makeup, shot on a full-frame DSLR with an 85mm lens, shallow depth of field, candid commercial photography, not an illustration, not anime, not a 3D render, not CGI, bright high-key lighting, airy pastel colors, sharp focus, no text, no letters, no logos, no watermark`;
   }
+  const IDEAS_OK = ['smiling at the camera','touching her curls with both hands','laughing joyfully','looking over her shoulder with a smile','playing with a curl and smiling','eyes closed, enjoying the moment, smiling','confident pose with a big smile','showing her curls proudly'];
+  function ideaSegura(t, s){ return /(sexy|sensual|seduct|lingerie|bra|bikini|nude|naked|bed|undress|strap|lip bit|biting|desnud|provoc)/i.test(t || '') || !t ? pick(IDEAS_OK, s) : t; }
   function imageURL(a){
     const f = FORMATOS[formato], enc = encodeURIComponent(fotoPrompt(a)), k = key();
-    const q = `width=${f.iw}&height=${f.ih}&seed=${a.seed}&model=flux&nologo=true&enhance=false`;
-    return k ? `https://gen.pollinations.ai/image/${enc}?${q}&key=${encodeURIComponent(k)}` : `https://image.pollinations.ai/prompt/${enc}?${q}`;
+    const q = `width=${f.iw}&height=${f.ih}&seed=${a.seed}&model=flux&nologo=true&enhance=false&safe=true`;
+    return k ? `https://gen.pollinations.ai/image/${enc}?${q}` : `https://image.pollinations.ai/prompt/${enc}?${q}`;
   }
   function shrink(blob, max){
     return new Promise((res, rej) => { const u = URL.createObjectURL(blob), im = new Image(); im.onload = () => {
@@ -570,7 +574,8 @@ Reglas:
   function queueImage(a){ a.imgState = 'cola'; delete a.img; a.imgEl = null; if (!queue.includes(a)) queue.push(a); refresh(a); runQueue(); }
   async function loadImage(url){
     try {
-      const res = await fetch(url);
+      const k = key(), hdrs = k && url.includes('gen.pollinations.ai') ? {Authorization: 'Bearer ' + k} : {};
+      const res = await fetch(url, {headers: hdrs});
       if (res.status === 402 || res.status === 429) return {retry: Number(res.headers.get('Retry-After')) || 15, code: res.status};
       if (res.status === 401 || res.status === 403) return {fatal: true, code: res.status};
       if (!res.ok) return {err: 'HTTP ' + res.status, code: res.status};
@@ -587,7 +592,7 @@ Reglas:
         im.onerror = () => {
           const im2 = new Image(); im2.onload = () => fin({remote: url}); im2.onerror = () => fin({err: 'no se pudo cargar la imagen (conexión bloqueada o límite)'}); im2.src = url + '&r=' + Date.now();
         };
-        im.src = url;
+        im.src = url.includes('gen.pollinations.ai') && key() ? url + '&key=' + encodeURIComponent(key()) : url;
       });
     }
   }
@@ -930,11 +935,11 @@ Reglas:
     try { const r = await aiText('Respondé solo con este JSON: {"ok": true}', null, 40000); txt = r && r.ok ? 'Texto: funciona.' : 'Texto: responde, pero raro.'; }
     catch (e) { txt = 'Texto: ' + (e && e.code === 'limite' ? 'límite gratis alcanzado, esperá unos segundos.' : e && e.code === 'invalid_json' ? 'responde, pero en otro formato (igual se puede usar).' : 'no conecta.'); }
     out.innerHTML = esc(txt) + '<br>Probando la IA de imágenes… (puede tardar hasta un minuto)';
-    const k = key(), u = k ? `https://gen.pollinations.ai/image/${encodeURIComponent('a red apple on a table, photo')}?width=256&height=256&seed=${Date.now() % 1e6}&model=flux&nologo=true&key=${encodeURIComponent(k)}` : `https://image.pollinations.ai/prompt/${encodeURIComponent('a red apple on a table, photo')}?width=256&height=256&seed=${Date.now() % 1e6}&model=flux&nologo=true`;
+    const k = key(), u = k ? `https://gen.pollinations.ai/image/${encodeURIComponent('a red apple on a table, photo')}?width=256&height=256&seed=${Date.now() % 1e6}&model=flux&nologo=true&safe=true` : `https://image.pollinations.ai/prompt/${encodeURIComponent('a red apple on a table, photo')}?width=256&height=256&seed=${Date.now() % 1e6}&model=flux&nologo=true`;
     const r = await loadImage(u);
     if (r.data || r.remote) img = `Imágenes: funcionan${r.remote ? ' (pero no se podrán descargar sin clave)' : ''}.<br><img src="${esc(r.data || r.remote)}" alt="Imagen de prueba" style="width:96px;height:96px;border-radius:10px;margin-top:6px">`;
     else if (r.retry) img = `Imágenes: llegaste al límite gratis (código ${r.code}). Esperá ${r.retry} segundos, o cargá una clave gratis.`;
-    else if (r.fatal) img = `Imágenes: la IA rechazó el pedido (código ${r.code}). La clave no es válida o no tiene saldo.`;
+    else if (r.fatal) img = `Imágenes: la IA rechazó el pedido (código ${r.code}). Revisá que sea una clave secreta (sk_…) bien copiada y que tengas saldo; si no, borrá la clave y probá sin ella.`;
     else img = 'Imágenes: no funcionan (' + esc(r.err || 'sin respuesta') + '). Cargá una clave gratis de Pollinations.';
     out.innerHTML = esc(txt) + '<br>' + img; btn.disabled = false;
   };
