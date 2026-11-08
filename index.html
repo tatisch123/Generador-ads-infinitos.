@@ -1,0 +1,951 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Generador de Ads Infinitos · Estudio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap">
+<style>
+  :root{
+    --bg:#FBEDE4; --panel:#FFFBF8; --ink:#2A1620; --ink2:#6E5560; --line:#F0DDD2; --line2:#E2C8BA;
+    --acc:#D9434F; --acc2:#A8306E; --acc-ink:#FFFFFF; --soft:#FBE7DC; --grad:linear-gradient(135deg,#E8553A 0%,#D9434F 45%,#A8306E 100%); --ok:#2F6B4F;
+    --serif:'Fraunces', Georgia, 'Times New Roman', serif; --sans:'Plus Jakarta Sans', Inter, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{font-family:var(--sans);background:radial-gradient(1200px 600px at 85% -10%,#F9CDB8 0%,transparent 60%),radial-gradient(900px 500px at -10% 10%,#FCE3D3 0%,transparent 55%),var(--bg);color:var(--ink);-webkit-font-smoothing:antialiased;min-height:100vh}
+  button,input,select,textarea{font:inherit;color:inherit}
+  a{color:var(--acc)}
+  /* Top bar */
+  .top{display:flex;flex-wrap:wrap;gap:16px;align-items:center;justify-content:space-between;padding:14px 24px;border-bottom:1px solid var(--line);background:rgba(255,251,248,.86);backdrop-filter:blur(10px);position:sticky;top:0;z-index:5}
+  .brand{display:flex;align-items:center;gap:12px}
+  .mark{width:40px;height:40px;border-radius:50%;background:var(--grad);display:grid;place-items:center}
+  .brand h1{margin:0;font-weight:800;font-size:20px;letter-spacing:-0.02em}
+  .brand p{margin:2px 0 0;font-size:12.5px;color:var(--ink2)}
+  .topact{display:flex;flex-wrap:wrap;align-items:center;gap:10px}
+  .count{font-size:13px;color:var(--ink2);padding-right:6px}
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;padding:10px 18px;border-radius:999px;border:1px solid var(--line2);background:var(--panel);font-weight:600;font-size:14px;cursor:pointer;text-decoration:none;color:var(--ink);white-space:nowrap}
+  .btn:hover{border-color:var(--ink)}
+  .btn.primary{background:var(--grad);color:#fff;border:0;box-shadow:0 10px 24px -12px rgba(168,48,110,.6)}
+  .btn.primary:hover{filter:brightness(1.05)}
+  .btn.dark{background:var(--ink);color:#FFF8F0;border-color:var(--ink)}
+  .btn.accent{background:var(--acc);border-color:var(--acc);color:#fff}
+  .btn.accent:hover{filter:brightness(.92)}
+  .btn:disabled{opacity:.55;cursor:wait}
+  .btn.sm{min-height:38px;padding:8px 14px;font-size:13px}
+  .btn svg{flex:none}
+  /* Layout */
+  .studio{display:flex;flex-wrap:wrap;gap:20px;padding:20px 24px;align-items:flex-start}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:18px}
+  .brief{flex:1 1 280px;max-width:320px;padding:6px 18px 18px;position:sticky;top:84px;max-height:calc(100vh - 100px);overflow:auto}
+  .stage{flex:999 1 420px;min-width:0;display:flex;flex-direction:column;align-items:center;gap:14px;position:sticky;top:84px}
+  .ctrl{flex:1 1 300px;max-width:360px;padding:18px;position:sticky;top:84px;max-height:calc(100vh - 100px);overflow:auto}
+  @media (max-width:1100px){.brief,.stage,.ctrl{position:static;max-height:none}}
+  .post{max-height:calc(100vh - 330px);display:flex;flex-direction:column}
+  .post canvas{flex:1 1 auto;min-height:0;width:auto !important;max-width:100%;max-height:calc(100vh - 470px);object-fit:contain;align-self:center}
+  @media (max-width:1100px){.post,.post canvas{max-height:none}}
+  @media (max-width: 1100px){ .brief,.ctrl{max-width:none} }
+  /* Brief */
+  .sec{border-bottom:1px solid var(--line);padding:14px 0}
+  .sec:last-child{border-bottom:0}
+  .sec > summary{list-style:none;cursor:pointer;display:flex;justify-content:space-between;align-items:center;font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--ink2);min-height:28px}
+  .sec > summary::-webkit-details-marker{display:none}
+  .sec > summary::after{content:'';width:8px;height:8px;border-right:2px solid var(--ink2);border-bottom:2px solid var(--ink2);transform:rotate(45deg);margin-right:4px;transition:transform .15s}
+  .sec[open] > summary::after{transform:rotate(-135deg)}
+  .fields{display:flex;flex-direction:column;gap:12px;padding-top:12px}
+  .f{display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:600}
+  .f input,.f textarea,.f select{font-weight:400;font-size:14px;padding:10px 12px;border:1px solid var(--line2);border-radius:10px;background:#fff;min-height:42px;width:100%}
+  .f textarea{resize:vertical;min-height:64px;line-height:1.4}
+  .f input:focus,.f textarea:focus,.f select:focus{outline:2px solid var(--ink);outline-offset:1px;border-color:var(--ink)}
+  .two{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+  .hint{font-size:12px;font-weight:400;color:var(--ink2);line-height:1.4}
+  .file{display:flex;align-items:center;gap:10px}
+  .file img{width:40px;height:40px;border-radius:8px;object-fit:cover;border:1px solid var(--line)}
+  .file input{font-size:12.5px;min-height:auto;padding:8px;border:1px dashed var(--line2);background:var(--soft)}
+  /* Stage */
+  .seg{display:inline-flex;padding:4px;background:var(--soft);border-radius:999px;gap:4px;border:1px solid var(--line)}
+  .seg button{border:0;background:transparent;min-height:36px;padding:6px 14px;border-radius:999px;font-size:13px;font-weight:600;color:var(--ink2);cursor:pointer}
+  .seg button[aria-pressed="true"]{background:var(--panel);color:var(--ink);box-shadow:0 1px 2px rgba(27,20,24,.12)}
+  .post{width:100%;max-width:470px;background:#fff;border:1px solid var(--line);border-radius:14px;overflow:hidden;box-shadow:0 18px 40px -24px rgba(27,20,24,.35)}
+  .post-h{display:flex;align-items:center;gap:10px;padding:10px 12px}
+  .av{width:34px;height:34px;border-radius:50%;background:var(--ink);color:#fff;display:grid;place-items:center;font-weight:700;font-size:13px;overflow:hidden;flex:none}
+  .av img{width:100%;height:100%;object-fit:cover}
+  .post-h b{font-size:13.5px;display:block}
+  .post-h span{font-size:12px;color:var(--ink2)}
+  .post canvas{display:block;width:100%;height:auto;background:var(--soft)}
+  .post-cta{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;background:#F2F2F2;border-bottom:1px solid #E5E5E5}
+  .post-cta b{font-size:13px;line-height:1.3}
+  .post-cta span{flex:none;font-size:12.5px;font-weight:600;padding:7px 12px;border-radius:7px;background:#E3E3E3}
+  .post-c{padding:10px 12px 14px;font-size:13.5px;line-height:1.45}
+  .post-c b{margin-right:6px}
+  .empty{width:100%;max-width:560px;text-align:center;padding:48px 28px}
+  .empty h2{font-weight:800;font-size:28px;line-height:1.15;margin:0 0 10px;letter-spacing:-0.02em}
+  .empty p{color:var(--ink2);line-height:1.55;margin:0 auto 22px;max-width:440px}
+  .status{width:100%;max-width:560px;display:flex;align-items:center;gap:10px;font-size:13.5px;padding:10px 14px;border-radius:12px;background:var(--panel);border:1px solid var(--line)}
+  .status.err{background:#FBEDE8;border-color:#EFC6B8}
+  .dot{width:10px;height:10px;border-radius:50%;background:var(--acc);animation:p 1s infinite alternate;flex:none}
+  @keyframes p{from{opacity:.25}to{opacity:1}}
+  /* Controls */
+  .ctrl h2{margin:0;font-weight:800;font-size:21px;letter-spacing:-0.02em}
+  .meta-top{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px}
+  .pill{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:5px 10px;border-radius:999px}
+  .pill.precio{background:#FCE7C8;color:#7A4500}
+  .pill.calidad{background:#E3EFE8;color:#25573F}
+  .pill.urgencia{background:#F9DCD4;color:#8F2A12}
+  .hip{font-size:13px;color:var(--ink2);margin:6px 0 14px;line-height:1.45}
+  .row{display:flex;flex-wrap:wrap;gap:8px}
+  .group{border-top:1px solid var(--line);padding-top:14px;margin-top:14px;display:flex;flex-direction:column;gap:12px}
+  .glab{font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--ink2)}
+  .styles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+  .styles button{border:1px solid var(--line2);background:#fff;border-radius:12px;padding:8px 6px 10px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:6px;font-size:12.5px;font-weight:600;min-height:44px}
+  .styles button[aria-pressed="true"]{border-color:var(--ink);box-shadow:inset 0 0 0 1px var(--ink)}
+  .styles i{display:block;width:100%;aspect-ratio:1/1;border-radius:7px;background:#CBBFB3;position:relative;overflow:hidden}
+  .styles i::after{content:'';position:absolute;left:12%;right:12%;height:14%;border-radius:3px;background:#fff}
+  .s-ed i::after{bottom:14%;background:#fff}
+  .s-ed i{background:linear-gradient(180deg,#CBBFB3 40%,#3A2E34)}
+  .s-im i{background:linear-gradient(0deg,#CBBFB3 40%,#3A2E34)}
+  .s-im i::after{top:14%}
+  .s-ta i::after{bottom:8%;left:8%;right:8%;height:34%;background:#FFFDFA}
+  .sw{display:flex;gap:8px}
+  .sw button{width:36px;height:36px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 0 1px var(--line2);cursor:pointer;padding:0}
+  .sw button[aria-pressed="true"]{box-shadow:0 0 0 2px var(--ink)}
+  .tog{display:flex;align-items:center;justify-content:space-between;font-size:13.5px;font-weight:500;min-height:36px;gap:10px}
+  .tog input{width:20px;height:20px;accent-color:var(--ink)}
+  .upl{position:relative;overflow:hidden}
+  .upl input{position:absolute;inset:0;opacity:0;cursor:pointer}
+  .stick{position:sticky;bottom:0;background:var(--panel);padding-top:14px;margin-top:14px;border-top:1px solid var(--line);display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+  /* Filmstrip */
+  .strip{width:100%;padding:14px 16px 12px}
+  .strip-h{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;margin-bottom:12px}
+  .strip-h h3{margin:0;font-weight:800;font-size:19px;letter-spacing:-0.01em}
+  .chips{display:flex;gap:6px;flex-wrap:wrap}
+  .chip{border:1px solid var(--line2);background:#fff;border-radius:999px;min-height:36px;padding:6px 14px;font-size:13px;font-weight:600;cursor:pointer}
+  .chip[aria-pressed="true"]{background:var(--ink);color:#FFF8F0;border-color:var(--ink)}
+  .opt{display:flex;flex-wrap:wrap;gap:6px}
+  .opt button{border:1px solid var(--line2);background:#fff;border-radius:999px;min-height:36px;padding:6px 12px;font-size:12.5px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:6px}
+  .opt button[aria-pressed="true"]{background:var(--ink);color:#FFF8F0;border-color:var(--ink)}
+  .opt button b{width:14px;height:14px;border-radius:50%;display:inline-block;box-shadow:inset 0 0 0 1px rgba(0,0,0,.12)}
+  .checks{display:flex;flex-wrap:wrap;gap:6px}
+  .checks label{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line2);background:#fff;border-radius:999px;min-height:36px;padding:6px 12px;font-size:12.5px;font-weight:600;cursor:pointer}
+  .checks input,.tog input{accent-color:var(--acc);width:18px !important;height:18px;min-height:0 !important;padding:0 !important;flex:none}
+  /* Hero */
+  .hero{display:flex;flex-wrap:wrap;gap:32px;align-items:center;padding:44px 24px 20px;max-width:1400px;margin:0 auto}
+  .hero-t{flex:1 1 420px}
+  .badge{display:inline-flex;align-items:center;gap:8px;padding:8px 14px;border-radius:999px;background:rgba(255,255,255,.7);border:1px solid var(--line);font-size:13px;font-weight:700}
+  .hero h2{margin:18px 0 12px;font-size:clamp(40px,6vw,76px);line-height:.98;font-weight:800;letter-spacing:-0.035em}
+  .hero h2 em{font-style:normal;background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .hero p{font-size:18px;color:var(--ink2);margin:0 0 22px;max-width:520px;line-height:1.5}
+  .hero .row{align-items:center}
+  .tag{font-size:13px;font-weight:700;padding:8px 14px;border-radius:999px}
+  .collage{flex:1 1 360px;position:relative;min-height:470px;max-width:520px}
+  .collage span{position:absolute;width:46%;aspect-ratio:4/5;border-radius:16px;box-shadow:0 20px 40px -20px rgba(42,22,32,.45);overflow:hidden;background-size:cover;background-position:center}
+  .collage span:nth-child(1){left:6%;top:0;transform:rotate(-7deg);background-color:#F28B7D}
+  .collage span:nth-child(2){left:50%;top:4%;transform:rotate(5deg);background-color:#F7B98B}
+  .collage span:nth-child(3){left:2%;top:42%;transform:rotate(4deg);background-color:#A8D5BA}
+  .collage span:nth-child(4){left:46%;top:46%;transform:rotate(-4deg);background-color:#F6D365}
+  .sec-title{max-width:1400px;margin:8px auto 0;padding:0 24px;display:flex;align-items:baseline;gap:12px}
+  .sec-title h2{margin:0;font-size:24px;font-weight:800;letter-spacing:-0.02em}
+  .sec-title p{margin:0;color:var(--ink2);font-size:14px}
+  .studio,.strip{max-width:1400px;margin-left:auto;margin-right:auto}
+  @media (min-width:1448px){.strip{margin-left:auto;margin-right:auto}}
+  .film{display:flex;gap:12px;overflow-x:auto;padding:4px 2px 10px;scroll-snap-type:x proximity}
+  .tlab{flex:none;writing-mode:vertical-rl;transform:rotate(180deg);font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--ink2);padding:4px 0;border-left:1px solid var(--line);padding-left:6px;align-self:stretch;display:flex;align-items:center;justify-content:center}
+  .th{flex:none;width:104px;border:0;background:transparent;padding:0;cursor:pointer;text-align:left;scroll-snap-align:start}
+  .th canvas{display:block;width:104px;height:auto;border-radius:10px;background:var(--soft);outline:2px solid transparent;outline-offset:2px;transition:outline-color .12s}
+  .th[aria-current="true"] canvas{outline-color:var(--ink)}
+  .th:hover canvas{outline-color:var(--line2)}
+  .th span{display:flex;align-items:center;gap:6px;font-size:11.5px;font-weight:600;color:var(--ink2);margin-top:6px}
+  .th i{width:8px;height:8px;border-radius:50%;flex:none}
+  .i-precio{background:#D48A1A}.i-calidad{background:#3F8A63}.i-urgencia{background:#C2410C}
+  .toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);background:var(--ink);color:#FFF8F0;padding:12px 18px;border-radius:12px;font-size:14px;opacity:0;pointer-events:none;transition:opacity .2s;z-index:20;max-width:90vw}
+  .toast.on{opacity:1}
+  footer{padding:0 24px 28px;font-size:12px;color:var(--ink2)}
+  [hidden]{display:none !important}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="brand">
+    <div class="mark" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.8 4.6L18.5 9l-4.7 1.4L12 15l-1.8-4.6L5.5 9l4.7-1.4z"/><path d="M19 15l.8 2 2 .8-2 .8-.8 2-.8-2-2-.8 2-.8z"/></svg></div>
+    <div><h1>Ads Infinitos</h1><p>Generador de anuncios con IA para Meta Ads</p></div>
+  </div>
+  <div class="topact">
+    <span class="count" id="contador"></span>
+    <button class="btn sm" id="btnCsv" type="button">Exportar textos (CSV)</button>
+    <button class="btn primary" id="btnGenTop" type="button">Generar anuncios</button>
+  </div>
+</header>
+
+<section class="hero">
+  <div class="hero-t">
+    <span class="badge"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l1.8 4.6L18.5 9l-4.7 1.4L12 15l-1.8-4.6L5.5 9l4.7-1.4z"/></svg>Meta Ads · A/B testing</span>
+    <h2>Generador de Ads <em>Infinitos</em></h2>
+    <p>Contale a la IA qué vendés, elegí el estilo y generá anuncios distintos en minutos: foto, texto y diseño. Si uno no te gusta, pedís otro.</p>
+    <div class="row">
+      <a class="btn primary" href="#estudio" style="min-height:52px;padding:12px 30px;font-size:16px">Empezar</a>
+      <span class="tag" style="background:#FCE7B5">Instagram</span>
+      <span class="tag" style="background:#CFE9D8">Facebook</span>
+      <span class="tag" style="background:#FFF">Historias</span>
+    </div>
+  </div>
+  <div class="collage" id="collage" aria-hidden="true"><span></span><span></span><span></span><span></span></div>
+</section>
+
+<div class="sec-title" id="estudio"><h2>Estudio</h2><p>1. Elegí las opciones · 2. Generá · 3. Ajustá cada anuncio y descargalo</p></div>
+
+<div class="studio">
+  <!-- OPCIONES DE LA EMPRESA -->
+  <aside class="panel brief" aria-label="Opciones del anuncio">
+    <form id="f" autocomplete="off">
+      <details class="sec" id="secIA"><summary>Conexión con la IA</summary>
+        <div class="fields">
+          <button class="btn sm" id="btnTest" type="button">Probar conexión</button>
+          <div id="testOut" class="hint" hidden></div>
+          <label class="f">Clave de Pollinations <span class="hint">gratis · se guarda solo en este navegador</span><input id="pkey" placeholder="Pegá acá tu clave (sk_… o pk_…)" autocomplete="off" spellcheck="false"></label>
+          <p class="hint" style="margin:0">Si las fotos no se crean: entrá a <a href="https://enter.pollinations.ai" target="_blank" rel="noopener">enter.pollinations.ai</a>, iniciá sesión con Google o GitHub, creá una clave y pegala acá. Con clave las fotos salen más rápido y sin marca de agua.</p>
+        </div>
+      </details>
+
+      <details class="sec" open><summary>Producto</summary>
+        <div class="fields">
+          <label class="f">Cuenta de la tienda<input name="tienda" value="@tutienda.uy"></label>
+          <div class="two">
+            <label class="f">Marca<input name="marca" value="Salon Line"></label>
+            <label class="f">Tamaño<input name="tam" value="1 kg"></label>
+          </div>
+          <label class="f">Producto<input name="producto" value="Crema para peinar Definición Intensa"></label>
+          <div class="two">
+            <label class="f">Precio de lista ($)<input name="lista" inputmode="numeric" value="790"></label>
+            <label class="f">Precio oferta ($)<input name="oferta" inputmode="numeric" value="590"></label>
+          </div>
+          <div class="two">
+            <label class="f">Combo x2 ($)<input name="combo" inputmode="numeric" value="1090"></label>
+            <label class="f">Usos por envase<input name="usos" inputmode="numeric" value="25"></label>
+          </div>
+          <label class="f">Beneficios <span class="hint">separados por coma</span><input name="beneficios" value="Define cada rulo, Hidrata sin apelmazar, Controla el frizz"></label>
+        </div>
+      </details>
+
+      <details class="sec" open><summary>Mensaje</summary>
+        <div class="fields">
+          <div class="f" style="gap:8px"><span>Enfoques a probar</span>
+            <div class="checks" id="enfoques">
+              <label><input type="checkbox" value="precio" checked>Precio</label>
+              <label><input type="checkbox" value="calidad" checked>Calidad</label>
+              <label><input type="checkbox" value="urgencia" checked>Urgencia</label>
+            </div>
+          </div>
+          <div class="f" style="gap:8px"><span>¿Quién escribe los textos?</span><div class="opt" data-opt="textos"></div></div>
+          <div class="fields" id="manual" hidden style="padding:12px;border:1px dashed var(--line2);border-radius:12px;background:#fff">
+            <label class="f">Titular<input name="m_h" value="Rulos definidos todo el día"></label>
+            <label class="f">Bajada<input name="m_s" value="Crema para peinar Salon Line de 1 kg."></label>
+            <div class="two"><label class="f">Etiqueta<input name="m_tag" value="Nuevo"></label><label class="f">Botón en la imagen<input name="m_cta" value="Comprar ahora"></label></div>
+            <label class="f">Texto principal (Meta)<textarea name="m_primary" rows="2">Rulos definidos, con brillo y sin frizz. Crema para peinar Salon Line de 1 kg.</textarea></label>
+            <label class="f">Título (Meta)<input name="m_title" value="Rulos definidos todo el día"></label>
+            <label class="f">Botón de Meta<select name="m_button"><option>Comprar</option><option>Más información</option><option>Pedir ahora</option><option>Enviar mensaje de WhatsApp</option></select></label>
+            <p class="hint" style="margin:0">Se crean varios anuncios con tu texto, cada uno con otra foto y otro diseño, para probar qué imagen funciona mejor.</p>
+          </div>
+          <div class="f" style="gap:8px" id="tonoBox"><span>Tono</span><div class="opt" data-opt="tono"></div></div>
+          <div class="f" style="gap:8px"><span>Anuncios por tanda</span><div class="opt" data-opt="cantidad"></div></div>
+          <label class="f">Público<input name="publico" value="Mujeres de 18 a 45 años con rulos u ondas, en Uruguay"></label>
+          <div class="two">
+            <label class="f">Promo termina <span class="hint">vacío = sin promo</span><input name="fin" value="el domingo 23:59"></label>
+            <label class="f">Cupo de pedidos<input name="cupo" inputmode="numeric" value="50"></label>
+          </div>
+        </div>
+      </details>
+
+      <details class="sec" open><summary>Foto con IA</summary>
+        <div class="fields">
+          <div class="f" style="gap:8px"><span>Escena</span><div class="opt" data-opt="escena"></div></div>
+          <div class="f" style="gap:8px"><span>Color de fondo</span><div class="opt" data-opt="fondo"></div></div>
+          <div class="f" style="gap:8px"><span>Estilo de foto</span><div class="opt" data-opt="foto"></div></div>
+          <div class="f" style="gap:8px"><span>Modelo: edad</span><div class="opt" data-opt="edad"></div></div>
+          <div class="f" style="gap:8px"><span>Modelo: tipo de rulo</span><div class="opt" data-opt="rulo"></div></div>
+          <div class="f" style="gap:8px"><span>Modelo: tono de piel</span><div class="opt" data-opt="piel"></div></div>
+          <div class="f" style="gap:8px"><span>Personas</span><div class="opt" data-opt="personas"></div></div>
+          <div class="f" style="gap:8px"><span>Producto en la foto</span><div class="opt" data-opt="pote"></div></div>
+        </div>
+      </details>
+
+      <details class="sec"><summary>Diseño</summary>
+        <div class="fields">
+          <div class="f" style="gap:8px"><span>Estilo del texto</span><div class="opt" data-opt="layout"></div></div>
+          <div class="f" style="gap:8px"><span>Tipografía</span><div class="opt" data-opt="tipo"></div></div>
+          <div class="f" style="gap:8px"><span>Color de marca</span><div class="opt" data-opt="acento"></div></div>
+          <label class="f">Logo <span class="hint">opcional, va arriba a la izquierda</span>
+            <span class="file"><input type="file" name="logo" accept="image/*"><img id="thumbLogo" alt="" hidden></span>
+          </label>
+        </div>
+      </details>
+
+      <details class="sec"><summary>Ajustes avanzados</summary>
+        <div class="fields">
+          <button class="btn sm" id="btnReset" type="button">Borrar todo y empezar de cero</button>
+        </div>
+      </details>
+    </form>
+    <button class="btn primary" id="btnGen" type="button" style="width:100%;margin-top:14px;min-height:50px;font-size:15px">Generar anuncios con IA</button>
+    <button class="btn sm" id="btnStop" type="button" hidden style="width:100%;margin-top:8px">Detener</button>
+  </aside>
+
+  <!-- VISTA PREVIA -->
+  <section class="stage" aria-label="Vista previa">
+    <div class="seg" role="group" aria-label="Formato" id="fmt">
+      <button type="button" data-f="1:1" aria-pressed="true">Feed 1:1</button>
+      <button type="button" data-f="4:5" aria-pressed="false">Feed 4:5</button>
+      <button type="button" data-f="9:16" aria-pressed="false">Historia 9:16</button>
+    </div>
+    <div class="status" id="status" role="status" aria-live="polite" hidden></div>
+    <div class="panel empty" id="empty">
+      <h2>Tu primer anuncio está a un clic</h2>
+      <p>Elegí las opciones a la izquierda y tocá "Generar anuncios con IA". La IA escribe los textos y crea una foto distinta para cada anuncio.</p>
+      <button class="btn primary" type="button" id="btnGenEmpty">Generar anuncios con IA</button>
+    </div>
+    <article class="post" id="post" hidden>
+      <div class="post-h"><div class="av" id="av"></div><div><b id="pHandle"></b><span>Publicidad</span></div></div>
+      <canvas id="cv" width="1080" height="1080" role="img" aria-label="Vista previa del anuncio"></canvas>
+      <div class="post-cta"><b id="pTitle"></b><span id="pBtn"></span></div>
+      <div class="post-c"><b id="pHandle2"></b><span id="pText"></span></div>
+    </article>
+<section class="panel strip" id="strip" hidden>
+  <div class="strip-h">
+    <h3>Variaciones</h3>
+    <div class="chips" role="group" aria-label="Filtrar por enfoque">
+      <button class="chip" type="button" data-fil="todos" aria-pressed="true">Todos</button>
+      <button class="chip" type="button" data-fil="precio" aria-pressed="false">Precio</button>
+      <button class="chip" type="button" data-fil="calidad" aria-pressed="false">Calidad</button>
+      <button class="chip" type="button" data-fil="urgencia" aria-pressed="false">Urgencia</button>
+    </div>
+    <button class="btn primary sm" type="button" id="btnGenMore">Generar más</button>
+  </div>
+  <div class="film" id="film"></div>
+</section>
+  </section>
+
+  <!-- CONTROLES DEL ANUNCIO -->
+  <aside class="panel ctrl" id="ctrl" aria-label="Editar anuncio" hidden></aside>
+</div>
+
+
+
+<footer>Obligatorio ITCD 2026 · Universidad ORT Uruguay · Artefacto 8: El Generador de "Ads" Infinitos. IA de texto e imagen: <a href="https://pollinations.ai">Pollinations.ai</a>. Las fotos muestran personas ficticias generadas por IA.</footer>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<script>
+(() => {
+  const $ = s => document.querySelector(s), $$ = s => Array.from(document.querySelectorAll(s));
+  const form = $('#f');
+  let ads = [], sel = null, formato = '1:1', filtro = 'todos', tandas = 0, busy = null, logo = null;
+  const FORMATOS = {'1:1':{h:1080, iw:768, ih:768}, '4:5':{h:1350, iw:688, ih:860}, '9:16':{h:1920, iw:576, ih:1024}};
+
+  // ---------- Opciones que elige la empresa ----------
+  const OPTS = {
+    tono: {def:'cercano', items:[['cercano','Cercano'],['divertido','Divertido'],['elegante','Elegante'],['directo','Directo']]},
+    cantidad: {def:'10', items:[['5','5'],['10','10']]},
+    textos: {def:'ia', items:[['ia','Que lo escriba la IA'],['yo','Lo escribo yo']]},
+    escena: {def:'color', items:[['color','Estudio de color'],['flores','Flores y frutas'],['bano','Baño luminoso'],['ciudad','Calle de Montevideo'],['playa','Playa'],['amigas','Con amigas']]},
+    fondo: {def:'variado', items:[['variado','Variado'],['coral','Coral'],['durazno','Durazno'],['menta','Menta'],['amarillo','Amarillo'],['lila','Lila'],['crema','Crema']]},
+    foto: {def:'editorial', items:[['editorial','Editorial de belleza'],['natural','Natural'],['minimal','Minimalista']]},
+    edad: {def:'variada', items:[['variada','Variada'],['18-25','18 a 25'],['26-35','26 a 35'],['36-45','36 a 45']]},
+    rulo: {def:'variado', items:[['variado','Variado'],['ondas','Ondas'],['rulos','Rulos'],['afro','Afro / coily']]},
+    piel: {def:'variado', items:[['variado','Variado'],['clara','Clara'],['trigueña','Trigueña'],['morena','Morena'],['negra','Negra']]},
+    personas: {def:'una', items:[['una','Una mujer'],['dos','Dos amigas']]},
+    pote: {def:'si', items:[['si','Con el pote en mano'],['no','Sin producto']]},
+    layout: {def:'auto', items:[['auto','Que elija la IA'],['editorial','Editorial'],['impacto','Impacto'],['tarjeta','Tarjeta']]},
+    tipo: {def:'moderna', items:[['moderna','Moderna'],['elegante','Elegante']]},
+    acento: {def:'#D9434F', items:[['#D9434F','Coral'],['#A8306E','Fucsia'],['#E8553A','Naranja'],['#2F6B4F','Verde'],['#2A1620','Negro'],['#6B4FA0','Violeta']]}
+  };
+  const FONDOS = {coral:['#F28B7D','soft coral'], durazno:['#F7B98B','warm peach'], menta:['#A8D5BA','mint green'], amarillo:['#F6D365','sunny yellow'], lila:['#C9B6E4','lilac'], crema:['#F3E6D8','warm cream']};
+  const opt = {};
+  Object.keys(OPTS).forEach(k => opt[k] = OPTS[k].def);
+  function renderOpts(){
+    $$('[data-opt]').forEach(box => {
+      const k = box.dataset.opt, o = OPTS[k];
+      box.innerHTML = o.items.map(([v, n]) => {
+        const dot = k === 'fondo' && FONDOS[v] ? `<b style="background:${FONDOS[v][0]}"></b>` : k === 'acento' ? `<b style="background:${v}"></b>` : '';
+        return `<button type="button" data-v="${v}" aria-pressed="${opt[k] === v}">${dot}${n}</button>`;
+      }).join('');
+      box.querySelectorAll('button').forEach(b => b.onclick = () => { opt[k] = b.dataset.v; renderOpts(); persist(); if (k === 'acento' || k === 'tipo' || k === 'layout') applyDesignToAll(k); });
+    });
+    const man = opt.textos === 'yo'; $('#manual').hidden = !man; $('#tonoBox').hidden = man;
+    ['#btnGen','#btnGenEmpty'].forEach(q => { const b = $(q); if (b && !busy) b.textContent = man ? 'Generar anuncios con mi texto' : (ads.length && q === '#btnGen' ? 'Generar más anuncios' : 'Generar anuncios con IA'); });
+  }
+  function applyDesignToAll(k){
+    // Cambios de diseño globales se aplican a todos los anuncios que no fueron tocados a mano en ese aspecto
+    ads.forEach(a => {
+      if (k === 'acento' && !a.accLocked) a.acc = opt.acento;
+      if (k === 'tipo' && !a.fontLocked) a.font = opt.tipo;
+      if (k === 'layout' && opt.layout !== 'auto' && !a.layoutLocked) a.layout = opt.layout;
+    });
+    renderAll();
+  }
+  const num = v => { const n = Number(String(v).replace(/[^\d.,]/g,'').replace(/\./g,'').replace(',','.')); return isFinite(n) && n > 0 ? n : null; };
+  const money = n => n == null ? '[precio]' : '$\u00A0' + Math.round(n).toLocaleString('es-UY');
+  const or = (v, ph) => (v && String(v).trim()) ? String(v).trim() : ph;
+
+  function data(){
+    const fd = new FormData(form);
+    const g = k => fd.get(k) || '';
+    const L = num(g('lista')), O = num(g('oferta')), C = num(g('combo')), U = num(g('usos'));
+    const pct = (L && O && O < L) ? Math.round((1 - O / L) * 100) : null;
+    return {
+      tienda: or(g('tienda'), '@[tutienda]'), marca: or(g('marca'), '[marca]'), producto: or(g('producto'), '[producto]'), tam: or(g('tam'), ''),
+      L: money(L), O: money(O), combo: money(C), usos: U ? Math.round(U) : '[usos]',
+      pct: pct == null ? '[%]' : pct, ahorro: (L && O && O < L) ? money(L - O) : '[ahorro]',
+      cpu: (O && U) ? money(Math.ceil(O / U)) : '[$ por uso]',
+      beneficios: or(g('beneficios'), '[beneficio 1], [beneficio 2], [beneficio 3]').split(',').map(s => s.trim()).filter(Boolean).slice(0,3),
+      fin: or(g('fin'), '[cuándo termina]'), cupo: or(g('cupo'), '[N]')
+    };
+  }
+
+  const SLOTS = [
+    {id:'A1', enfoque:'precio', nombre:'Precio directo', kind:'price', v:[
+      d => ({tag:'Precio · -'+d.pct+'%', h:'Rulos definidos por '+d.O, s:d.producto+' '+d.tam+'.', cta:'Comprar ahora',
+             primary:'¿Rulos definidos sin gastar de más? '+d.marca+' '+d.producto+' '+d.tam+' a '+d.O+' (antes '+d.L+').', title:'Rulos definidos por '+d.O, button:'Comprar'}),
+      d => ({tag:'Precio · oferta', h:d.pct+'% OFF en tu crema de rulos', s:'De '+d.L+' a '+d.O+'. '+d.marca+' original.', cta:'Lo quiero',
+             primary:d.pct+'% OFF en '+d.marca+' '+d.producto+'. Pasá de '+d.L+' a '+d.O+'.', title:d.pct+'% OFF en '+d.marca, button:'Comprar'}),
+      d => ({tag:'Precio · ahorro', h:'Ahorrate '+d.ahorro+' en tus rulos', s:d.producto+' '+d.tam+' a '+d.O+'.', cta:'Comprar ahora',
+             primary:'Misma crema, '+d.ahorro+' menos. '+d.marca+' '+d.producto+' '+d.tam+' a '+d.O+'.', title:'Ahorrate '+d.ahorro, button:'Comprar'})
+    ], hip:'Un descuento claro alcanza para decidir la compra.'},
+    {id:'A2', enfoque:'precio', nombre:'Precio por uso', kind:'none', v:[
+      d => ({tag:'Precio · rendimiento', h:'Menos de '+d.cpu+' por lavado', s:'Un envase de '+d.tam+' rinde unas '+d.usos+' aplicaciones.', cta:'Ver precio',
+             primary:'Un pote de '+d.tam+' rinde unas '+d.usos+' aplicaciones: menos de '+d.cpu+' por lavado. Hacé la cuenta.', title:'Menos de '+d.cpu+' por lavado', button:'Más información'}),
+      d => ({tag:'Precio · rendimiento', h:d.usos+' lavados en un solo pote', s:'Sale '+d.cpu+' por uso. Hacé la cuenta.', cta:'Ver precio',
+             primary:d.marca+' '+d.producto+' '+d.tam+': unas '+d.usos+' aplicaciones por pote, '+d.cpu+' cada una.', title:d.usos+' lavados en un pote', button:'Más información'})
+    ], hip:'El rendimiento convence más que el precio total.'},
+    {id:'A3', enfoque:'precio', nombre:'Combo x2', kind:'none', v:[
+      d => ({tag:'Precio · combo', h:'Llevá 2, pagá menos', s:'2 potes por '+d.combo+'.', cta:'Quiero el combo',
+             primary:'Para no quedarte sin: 2 potes de '+d.marca+' '+d.producto+' por '+d.combo+'.', title:'Llevá 2 por '+d.combo, button:'Comprar'}),
+      d => ({tag:'Precio · combo', h:'Uno para vos, otro para tu hermana', s:'2 potes por '+d.combo+'.', cta:'Quiero el combo',
+             primary:'Compartí los rulos: 2 potes de '+d.marca+' '+d.producto+' por '+d.combo+'.', title:'2 potes por '+d.combo, button:'Comprar'})
+    ], hip:'Un combo sube el ticket promedio.'},
+    {id:'B1', enfoque:'calidad', nombre:'Resultado', kind:'none', v:[
+      d => ({tag:'Calidad · resultado', h:'Mismo pelo. Otra definición.', s:d.marca+' '+d.producto+'.', cta:'Comprar',
+             primary:'Mismo pelo, otra definición. '+d.marca+' '+d.producto+' '+d.tam+'.', title:'Mismo pelo. Otra definición.', button:'Comprar'}),
+      d => ({tag:'Calidad · resultado', h:'Rulos definidos desde la primera lavada', s:d.marca+' '+d.producto+'.', cta:'Comprar',
+             primary:'Rulos definidos desde la primera lavada. '+d.marca+' '+d.producto+' '+d.tam+'.', title:'Rulos definidos desde el día 1', button:'Comprar'})
+    ], hip:'Mostrar el resultado vende más que explicar el producto.'},
+    {id:'B2', enfoque:'calidad', nombre:'Beneficios', kind:'checks', v:[
+      d => ({tag:'Calidad · beneficios', h:'Lo que tus rulos te venían pidiendo', s:'', cta:'Probala',
+             primary:d.beneficios.join(', ')+'. '+d.marca+' '+d.producto+'.', title:'Probala en tus rulos', button:'Comprar'}),
+      d => ({tag:'Calidad · beneficios', h:'Tu rutina de rulos en un paso', s:'', cta:'Probala',
+             primary:'Un solo producto: '+d.beneficios.join(', ').toLowerCase()+'.', title:'Tu rutina en un paso', button:'Comprar'})
+    ], hip:'Explicar el producto ayuda a quien no lo conoce.'},
+    {id:'B3', enfoque:'calidad', nombre:'Estilo de vida', kind:'none', v:[
+      d => ({tag:'Calidad · estilo', h:'Rulos con onda todo el día', s:'De la mañana a la noche, sin frizz.', cta:'Lo quiero',
+             primary:'Rulos con onda de la mañana a la noche. '+d.marca+' '+d.producto+'.', title:'Rulos con onda todo el día', button:'Comprar'}),
+      d => ({tag:'Calidad · estilo', h:'Tus rulos, tu mejor accesorio', s:d.marca+' '+d.producto+' '+d.tam+'.', cta:'Lo quiero',
+             primary:'Tus rulos son tu mejor accesorio. Cuidalos con '+d.marca+'.', title:'Tus rulos, tu mejor accesorio', button:'Comprar'})
+    ], hip:'Asociar el producto a un estilo de vida genera deseo.'},
+    {id:'B4', enfoque:'calidad', nombre:'Producto original', kind:'none', v:[
+      d => ({tag:'Calidad · confianza', h:'Original de Brasil. Sin vueltas.', s:d.marca+' original. Te asesoramos por WhatsApp.', cta:'Escribinos',
+             primary:d.marca+' original. ¿Dudas sobre cuál es para tu tipo de rulo? Escribinos y te asesoramos.', title:'Original de Brasil. Sin vueltas.', button:'Enviar mensaje de WhatsApp'}),
+      d => ({tag:'Calidad · asesoramiento', h:'¿No sabés cuál es para tu rulo?', s:'Escribinos y te recomendamos. '+d.marca+' original.', cta:'Escribinos',
+             primary:'Cada rulo es distinto. Contanos el tuyo por WhatsApp y te decimos qué '+d.marca+' te conviene.', title:'Te asesoramos gratis', button:'Enviar mensaje de WhatsApp'})
+    ], hip:'La confianza y el asesoramiento generan consultas.'},
+    {id:'C1', enfoque:'urgencia', nombre:'Fecha límite', kind:'deadline', v:[
+      d => ({tag:'Urgencia · tiempo', h:'Últimas horas al -'+d.pct+'%', s:'Termina '+d.fin+'. Después vuelve a '+d.L+'.', cta:'Aprovechar ahora',
+             primary:'Últimas horas con '+d.pct+'% OFF en '+d.marca+' '+d.producto+'. Termina '+d.fin+'.', title:'Últimas horas al -'+d.pct+'%', button:'Comprar'}),
+      d => ({tag:'Urgencia · tiempo', h:'Se termina '+d.fin, s:d.pct+'% OFF hasta entonces: '+d.O+'.', cta:'Aprovechar ahora',
+             primary:'La promo de '+d.marca+' a '+d.O+' se termina '+d.fin+'. No lo dejes para después.', title:'Se termina '+d.fin, button:'Comprar'})
+    ], hip:'Un límite de tiempo acelera la compra.'},
+    {id:'C2', enfoque:'urgencia', nombre:'Stock limitado', kind:'stock', v:[
+      d => ({tag:'Urgencia · stock', h:'Quedan pocos potes de esta tanda', s:'', cta:'Reservar el mío',
+             primary:'Quedan pocos potes de '+d.marca+' '+d.producto+'. Reservá el tuyo antes de que se agote.', title:'Quedan pocos potes', button:'Pedir ahora'}),
+      d => ({tag:'Urgencia · stock', h:'Se nos está por agotar', s:'', cta:'Reservar el mío',
+             primary:'La '+d.producto+' de '+d.marca+' se está por agotar. Asegurá la tuya.', title:'Se está por agotar', button:'Pedir ahora'})
+    ], hip:'La escasez funciona mejor que el reloj.'},
+    {id:'C3', enfoque:'urgencia', nombre:'Cupo limitado', kind:'none', v:[
+      d => ({tag:'Urgencia · cupo', h:'Solo para los primeros '+d.cupo+' pedidos', s:d.producto+' '+d.tam+' a '+d.O+'. Después vuelve a precio normal.', cta:'Entrar en el cupo',
+             primary:'Solo los primeros '+d.cupo+' pedidos se llevan '+d.marca+' '+d.producto+' a '+d.O+'.', title:'Solo los primeros '+d.cupo, button:'Comprar'}),
+      d => ({tag:'Urgencia · cupo', h:d.cupo+' potes a '+d.O+'. Ni uno más.', s:'Cuando se llena el cupo, vuelve a '+d.L+'.', cta:'Entrar en el cupo',
+             primary:d.cupo+' potes de '+d.marca+' a '+d.O+'. Cuando se llena el cupo, vuelve a '+d.L+'.', title:d.cupo+' potes a '+d.O, button:'Comprar'})
+    ], hip:'Un cupo concreto genera más urgencia.'}
+  ];
+  // ---------- IA: Pollinations.ai (gratis) ----------
+  const key = () => ($('#pkey').value || '').trim();
+  const sleep = ms => new Promise(r => setTimeout(r, ms));
+  const pick = (arr, n) => arr[Math.abs(n) % arr.length];
+  const EXTRA_MAP = {precio:'price', checks:'checks', reloj:'deadline', stock:'stock', ninguno:'none'};
+  const BOTONES = ['Comprar','Más información','Pedir ahora','Enviar mensaje de WhatsApp'];
+  const LAYOUTS = ['editorial','impacto','tarjeta'];
+  function enfoques(){ const v = $$('#enfoques input:checked').map(i => i.value); return v.length ? v : ['precio','calidad','urgencia']; }
+  function reparto(n){
+    const e = enfoques(); if (e.length === 3) return n === 10 ? {precio:3, calidad:4, urgencia:3} : {precio:2, calidad:2, urgencia:1};
+    const r = {}; e.forEach((k, i) => r[k] = Math.floor(n / e.length) + (i < n % e.length ? 1 : 0)); return r;
+  }
+  function brief(){
+    const fd = new FormData(form), g = k => String(fd.get(k) || '').trim();
+    return ['Tienda: ' + (g('tienda') || '[sin cuenta]'), 'Marca: ' + g('marca'), 'Producto: ' + g('producto') + ' ' + g('tam'),
+      'Precio de lista: $' + (g('lista') || '[sin dato]') + ' · Precio oferta: $' + (g('oferta') || '[sin dato]') + ' · Combo x2: $' + (g('combo') || '[sin dato]'),
+      'Rinde: ' + (g('usos') || '[sin dato]') + ' usos por envase', 'Público: ' + g('publico'), 'Beneficios: ' + g('beneficios'),
+      'Tono pedido: ' + opt.tono,
+      'Promo vigente: ' + (g('fin') ? 'termina ' + g('fin') + (g('cupo') ? ', cupo de ' + g('cupo') + ' pedidos' : '') : 'NINGUNA')].join('\n');
+  }
+  const SCHEMA = `{"enfoque":"precio|calidad|urgencia","angulo":"nombre corto","extra":"precio|checks|reloj|stock|ninguno","etiqueta":"máx 3 palabras","titular":"máx 7 palabras, con gancho","bajada":"máx 12 palabras o vacío","cta_imagen":"máx 3 palabras","texto_principal":"máx 125 caracteres","titulo_meta":"máx 40 caracteres","boton_meta":"Comprar|Más información|Pedir ahora|Enviar mensaje de WhatsApp","hipotesis":"1 frase","estilo":"editorial|impacto|tarjeta","idea_foto":"en inglés, 1 frase: pose, gesto, emoción y accesorios de la escena"}`;
+  const RULES = `Sos redactor publicitario de una tienda online uruguaya. Escribís en español rioplatense con voseo ("comprá", "vos", "tenés"), natural, con gancho y sin clichés.
+Reglas:
+- No inventes precios, descuentos, testimonios, reseñas, cifras ni datos que no estén en el brief. Si falta un dato, ponelo entre corchetes.
+- Las piezas de urgencia usan solo la promo vigente del brief. Si es NINGUNA, urgencia suave sin fechas ni cupos inventados.
+- "extra": precio (precio tachado y oferta), checks (beneficios), reloj (fecha de fin, solo si hay promo), stock (barra de stock) o ninguno.
+- "estilo": editorial (texto abajo sobre la foto), impacto (titular grande arriba) o tarjeta (texto en una tarjeta clara). Alterná.
+- "idea_foto": variá pose y emoción en cada anuncio (sonriendo, tocando sus rulos, mirando a cámara, riendo, de perfil, aplicando crema). No describas la ropa ni el fondo, eso lo define la app.`;
+  function parseJSON(text){
+    const tries = [text, (text.match(/```(?:json)?\s*([\s\S]*?)```/) || [])[1]];
+    const a = text.indexOf('['), b = text.lastIndexOf(']'), c = text.indexOf('{'), d2 = text.lastIndexOf('}');
+    if (a >= 0 && b > a) tries.push(text.slice(a, b + 1));
+    if (c >= 0 && d2 > c) tries.push(text.slice(c, d2 + 1));
+    for (const t of tries){ if (!t) continue; try { return JSON.parse(t); } catch {} }
+    throw {code:'invalid_json'};
+  }
+  async function aiText(prompt, signal){
+    const k = key(), body = JSON.stringify({model:'openai', messages:[{role:'user', content:prompt}], seed: Math.floor(Math.random() * 1e9)});
+    const url = k ? 'https://gen.pollinations.ai/v1/chat/completions?key=' + encodeURIComponent(k) : 'https://text.pollinations.ai/openai';
+    let res = null;
+    try { res = await fetch(url, {method:'POST', headers:{'Content-Type':'application/json'}, body, signal}); }
+    catch (e) { if (signal && signal.aborted) throw {code:'cancelled'}; }
+    if (res && (res.status === 402 || res.status === 429)) throw {code:'limite', wait: Number(res.headers.get('Retry-After')) || 20};
+    if (!res || !res.ok){
+      if (k) throw {code:'red'};
+      try { res = await fetch('https://text.pollinations.ai/' + encodeURIComponent(prompt) + '?model=openai&seed=' + Math.floor(Math.random() * 1e9), {signal}); }
+      catch (e) { if (signal && signal.aborted) throw {code:'cancelled'}; throw {code:'red'}; }
+      if (res.status === 402 || res.status === 429) throw {code:'limite', wait: Number(res.headers.get('Retry-After')) || 20};
+      if (!res.ok) throw {code:'red'};
+    }
+    const raw = await res.text(); let txt = raw;
+    try { const j = JSON.parse(raw); if (j && j.choices && j.choices[0]) txt = j.choices[0].message.content || ''; } catch {}
+    return parseJSON(txt);
+  }
+  const errMsg = e => e && e.code === 'limite' ? `Llegaste al límite gratis de la IA. Esperá unos ${e.wait || 20} segundos y probá de nuevo.`
+    : e && e.code === 'invalid_json' ? 'La IA respondió en un formato raro. Probá de nuevo.'
+    : 'No se pudo conectar con la IA gratis. Revisá tu conexión y probá de nuevo.';
+
+  // ---------- Prompt de la foto: se arma con las opciones de la empresa ----------
+  function fotoPrompt(a){
+    const s = a.seed, o = a.op || opt;
+    const edades = {'18-25':['21-year-old','24-year-old'], '26-35':['28-year-old','33-year-old'], '36-45':['38-year-old','43-year-old']};
+    const edad = o.edad === 'variada' ? pick(['22-year-old','27-year-old','31-year-old','36-year-old','42-year-old'], s) : pick(edades[o.edad] || ['28-year-old'], s);
+    const rulos = {ondas:['soft defined 2C waves','loose beachy waves'], rulos:['bouncy defined 3A curls','voluminous 3B ringlet curls','big glossy 3C curls'], afro:['defined 4A coily hair','voluminous 4B afro curls']};
+    const rulo = o.rulo === 'variado' ? pick([].concat(rulos.ondas, rulos.rulos, rulos.afro), s >> 3) : pick(rulos[o.rulo] || rulos.rulos, s >> 3);
+    const pieles = {clara:['fair skin with freckles','light skin'], 'trigueña':['olive skin','warm tan skin'], morena:['golden brown skin','caramel skin'], negra:['deep brown skin','dark ebony skin']};
+    const piel = o.piel === 'variado' ? pick([].concat(...Object.values(pieles)), s >> 5) : pick(pieles[o.piel] || pieles['trigueña'], s >> 5);
+    const fondoKey = o.fondo === 'variado' ? pick(Object.keys(FONDOS), s >> 7) : o.fondo;
+    const col = (FONDOS[fondoKey] || FONDOS.coral)[1];
+    a.bg = (FONDOS[fondoKey] || FONDOS.coral)[0];
+    const escenas = {
+      color: `seamless ${col} studio backdrop`,
+      flores: `${col} backdrop with tropical flowers, leaves and fresh fruit props (peach, citrus, hibiscus)`,
+      bano: `bright airy bathroom with ${col} tones and soft daylight from a window`,
+      ciudad: `sunny street in Montevideo with colonial facades, ${col} color accents`,
+      playa: `Uruguayan beach at golden hour, soft ${col} tones`,
+      amigas: `cozy cafe terrace with friends, ${col} color accents`
+    };
+    const persona = o.personas === 'dos' ? `two fictional women friends, one ${edad} with ${rulo} and ${piel}, both with defined curly hair` : `a fictional ${edad} woman with ${rulo} and ${piel}`;
+    const pote = o.pote === 'si' ? ', holding a plain unbranded cosmetic jar of curl cream near her face' : '';
+    const estilo = {editorial:'high-end beauty editorial advertising photograph', natural:'authentic natural lifestyle photograph', minimal:'clean minimalist beauty studio photograph'}[o.foto] || 'beauty advertising photograph';
+    const comp = a.layout === 'impacto' ? 'subject placed in the lower two thirds, calm empty background space at the top for a headline' : 'subject in the upper two thirds, calm empty space in the lower third for text';
+    return `${estilo} of ${persona}${pote}, ${a.idea || 'smiling and touching her curls'}, ${escenas[o.escena] || escenas.color}, ${comp}, photorealistic, glowing skin, soft natural light, sharp focus, vertical composition, no text, no letters, no logos, no watermark`;
+  }
+  function imageURL(a){
+    const f = FORMATOS[formato], enc = encodeURIComponent(fotoPrompt(a)), k = key();
+    const q = `width=${f.iw}&height=${f.ih}&seed=${a.seed}&model=flux&nologo=true&enhance=false`;
+    return k ? `https://gen.pollinations.ai/image/${enc}?${q}&key=${encodeURIComponent(k)}` : `https://image.pollinations.ai/prompt/${enc}?${q}`;
+  }
+  function shrink(blob, max){
+    return new Promise((res, rej) => { const u = URL.createObjectURL(blob), im = new Image(); im.onload = () => {
+      const k = Math.min(1, (max || 1080) / Math.max(im.width, im.height)), c = document.createElement('canvas'); c.width = Math.round(im.width * k); c.height = Math.round(im.height * k);
+      c.getContext('2d').drawImage(im, 0, 0, c.width, c.height); URL.revokeObjectURL(u); res(c.toDataURL('image/jpeg', 0.86)); }; im.onerror = rej; im.src = u; });
+  }
+  const queue = []; let qRunning = false;
+  function queueImage(a){ a.imgState = 'cola'; delete a.img; a.imgEl = null; if (!queue.includes(a)) queue.push(a); refresh(a); runQueue(); }
+  async function loadImage(url){
+    try {
+      const res = await fetch(url);
+      if (res.status === 402 || res.status === 429) return {retry: Number(res.headers.get('Retry-After')) || 15, code: res.status};
+      if (res.status === 401 || res.status === 403) return {fatal: true, code: res.status};
+      if (!res.ok) return {err: 'HTTP ' + res.status, code: res.status};
+      const blob = await res.blob();
+      if (!/^image\//.test(blob.type)){ const t = await blob.text().catch(() => ''); return {err: 'la respuesta no es una imagen' + (t ? ': ' + t.slice(0, 120) : '')}; }
+      return {data: await shrink(blob, 1080)};
+    } catch (e) {
+      // Respaldo: cargar como imagen común (sirve aunque el servidor no permita fetch)
+      return await new Promise(res => {
+        const im = new Image(); let done = false; im.crossOrigin = 'anonymous';
+        const fin = r => { if (!done){ done = true; clearTimeout(to); res(r); } };
+        const to = setTimeout(() => fin({err: 'tiempo agotado'}), 120000);
+        im.onload = () => { try { const c = document.createElement('canvas'), k = Math.min(1, 1080 / Math.max(im.width, im.height)); c.width = im.width * k; c.height = im.height * k; c.getContext('2d').drawImage(im, 0, 0, c.width, c.height); fin({data: c.toDataURL('image/jpeg', .86)}); } catch { fin({remote: url}); } };
+        im.onerror = () => {
+          const im2 = new Image(); im2.onload = () => fin({remote: url}); im2.onerror = () => fin({err: 'no se pudo cargar la imagen (conexión bloqueada o límite)'}); im2.src = url + '&r=' + Date.now();
+        };
+        im.src = url;
+      });
+    }
+  }
+  let lastImgErr = '';
+  async function runQueue(){
+    if (qRunning) return; qRunning = true;
+    while (queue.length){
+      const a = queue.shift(); if (!ads.includes(a)) continue;
+      a.imgState = 'cargando'; delete a.imgErr; refresh(a); fotoStatus();
+      let ok = false, fatal = false;
+      for (let i = 0; i < 8 && !ok && !fatal; i++){
+        const r = await loadImage(imageURL(a));
+        if (r.data){ a.img = r.data; a.tainted = false; ok = true; }
+        else if (r.remote){ a.img = r.remote; a.tainted = true; ok = true; }
+        else if (r.retry){ fotoStatus(`Límite gratis de fotos: esperando ${r.retry} segundos… (con una clave gratis esto no pasa)`); await sleep(r.retry * 1000); }
+        else if (r.fatal){ fatal = true; a.imgErr = 'La IA rechazó el pedido (código ' + r.code + '). Revisá tu clave en "Conexión con la IA".'; }
+        else { a.imgErr = r.err; await sleep(3000 + i * 2000); }
+      }
+      a.imgEl = null; a.imgState = ok ? 'ok' : 'error'; if (!ok){ lastImgErr = a.imgErr || 'sin respuesta'; }
+      refresh(a); persist(); fotoStatus();
+      if (fatal){ queue.forEach(x => { x.imgState = 'error'; x.imgErr = a.imgErr; refresh(x); }); queue.length = 0; break; }
+      await sleep(key() ? 500 : 2500);
+    }
+    qRunning = false; fotoStatus();
+  }
+  function fotoStatus(extra){
+    if (extra){ status(extra, 'busy'); return; }
+    const n = ads.filter(a => a.imgState === 'cola' || a.imgState === 'cargando').length;
+    if (n) status(`La IA está creando las fotos: faltan ${n}. Mientras tanto podés editar los textos.`, 'busy');
+    else if (!busy && /creando las fotos|Límite gratis de fotos/.test($('#status').textContent)) {
+      const fails = ads.filter(a => a.imgState === 'error').length;
+      if (fails){ status(`No se pudieron crear ${fails} fotos. Motivo: ${lastImgErr}. Tocá "Probar conexión" o cargá una clave gratis en "Conexión con la IA".`, 'err'); $('#secIA').open = true; }
+      else { status('¡Listo! Todas las fotos están generadas.'); setTimeout(() => status(''), 3500); }
+    }
+  }
+
+  // ---------- Crear anuncios ----------
+  const uid = () => Math.random().toString(36).slice(2, 9);
+  function baseAd(tanda, i){
+    return {uid: uid(), tanda, seed: Math.floor(Math.random() * 1e9), op: Object.assign({}, opt), acc: opt.acento, font: opt.tipo, showPrice: true, showLogo: true};
+  }
+  function normalize(o, tanda, i){
+    o = o || {}; const t = v => String(v == null ? '' : v).trim();
+    const enf = ['precio','calidad','urgencia'].includes(t(o.enfoque).toLowerCase()) ? t(o.enfoque).toLowerCase() : 'calidad';
+    let kind = EXTRA_MAP[t(o.extra).toLowerCase()] || 'none';
+    if (kind === 'deadline' && !String(new FormData(form).get('fin') || '').trim()) kind = 'none';
+    const lay = opt.layout !== 'auto' ? opt.layout : (LAYOUTS.includes(t(o.estilo)) ? t(o.estilo) : LAYOUTS[i % 3]);
+    return Object.assign(baseAd(tanda, i), {source:'ia', enfoque: enf, nombre: t(o.angulo) || 'Variante', kind, layout: lay,
+      tag: t(o.etiqueta) || enf, h: t(o.titular) || '[titular]', s: t(o.bajada), cta: t(o.cta_imagen) || 'Comprar',
+      primary: t(o.texto_principal), title: t(o.titulo_meta), button: BOTONES.includes(t(o.boton_meta)) ? t(o.boton_meta) : 'Comprar',
+      hip: t(o.hipotesis), idea: t(o.idea_foto)});
+  }
+  function numerar(list){ const c = {precio:0, calidad:0, urgencia:0}; list.forEach(a => { c[a.enfoque]++; a.id = a.enfoque[0].toUpperCase() + c[a.enfoque]; a.orig = snap(a); }); }
+  const snap = a => JSON.stringify({nombre:a.nombre, kind:a.kind, layout:a.layout, tag:a.tag, h:a.h, s:a.s, cta:a.cta, primary:a.primary, title:a.title, button:a.button, hip:a.hip, idea:a.idea, acc:a.acc, font:a.font});
+
+  function generarManual(){
+    const fd = new FormData(form), g = k => String(fd.get(k) || '').trim(), n = Number(opt.cantidad) || 10, tanda = tandas + 1;
+    const enf = enfoques()[0] || 'calidad';
+    const ideas = ['smiling at the camera','touching her curls with both hands','laughing joyfully','looking over her shoulder','applying cream to her curls','eyes closed, enjoying the moment','playing with a curl','confident pose, hand on hip','holding the jar next to her cheek','walking and smiling'];
+    const nuevos = Array.from({length: n}, (_, i) => Object.assign(baseAd(tanda, i), {source:'manual', enfoque: enf, nombre: 'Foto ' + (i + 1), kind: 'none', layout: opt.layout !== 'auto' ? opt.layout : LAYOUTS[i % 3],
+      tag: g('m_tag'), h: g('m_h') || '[titular]', s: g('m_s'), cta: g('m_cta') || 'Comprar', primary: g('m_primary'), title: g('m_title'), button: g('m_button') || 'Comprar', hip: 'Mismo texto, otra foto: ¿qué imagen funciona mejor?', idea: ideas[(i + tanda * 3) % ideas.length]}));
+    nuevos.forEach((a, i) => { a.id = 'M' + (i + 1); a.orig = snap(a); });
+    tandas = tanda; ads = nuevos.concat(ads); sel = nuevos[0].uid; renderAll(); persist(); nuevos.forEach(queueImage);
+  }
+  async function generar(){
+    if (busy) return;
+    if (opt.textos === 'yo'){ generarManual(); return; }
+    const n = Number(opt.cantidad) || 10, rep = reparto(n), tanda = tandas + 1;
+    const pedido = Object.entries(rep).filter(([, v]) => v).map(([k, v]) => `${v} con enfoque ${k}`).join(', ');
+    const prev = ads.slice(0, 60).map(a => '- ' + a.h).join('\n') || '(ninguno todavía)';
+    const prompt = `${RULES}\n\nBRIEF DEL PRODUCTO:\n${brief()}\n\nGenerá exactamente ${n} anuncios NUEVOS para Meta Ads: ${pedido}${rep.urgencia ? ' (urgencia = miedo a perderse la oferta)' : ''}. Cada uno con un ángulo distinto; cambiá solo el enfoque, nunca el producto. Tanda ${tanda}: ángulos y titulares diferentes a todos los anteriores.\n\nTITULARES YA USADOS (no los repitas):\n${prev}\n\nRespondé SOLO con un array JSON de ${n} objetos con esta forma, sin texto antes ni después:\n${SCHEMA}`;
+    busy = new AbortController(); setBusy(true);
+    status(`La IA está escribiendo ${n} anuncios nuevos… (puede tardar hasta un minuto)`, 'busy');
+    try {
+      const out = await aiText(prompt, busy.signal);
+      const arr = Array.isArray(out) ? out : (out && (out.anuncios || out.ads || out.data)) || null;
+      if (!Array.isArray(arr) || !arr.length) throw {code:'invalid_json'};
+      const ord = {precio:0, calidad:1, urgencia:2};
+      const nuevos = arr.slice(0, n).map((o, i) => normalize(o, tanda, i)).sort((a, b) => ord[a.enfoque] - ord[b.enfoque]);
+      numerar(nuevos); tandas = tanda; ads = nuevos.concat(ads); sel = nuevos[0].uid;
+      status(`Textos listos. Ahora la IA crea las fotos, de a una.`, 'busy');
+      renderAll(); persist(); nuevos.forEach(queueImage);
+    } catch (e) {
+      if (e && e.code === 'cancelled') status('Generación detenida.');
+      else if (e && e.code === 'limite') status(errMsg(e), 'err');
+      else { status(errMsg(e) + ' Mientras tanto usé textos de plantilla (las fotos sí son con IA).', 'err'); templateBatch(tanda, n); }
+    } finally { busy = null; setBusy(false); }
+  }
+  function templateBatch(tanda, n){
+    const d = data(), rep = reparto(n), t = tanda - 1, out = [];
+    ['precio','calidad','urgencia'].forEach(enf => {
+      SLOTS.filter(s => s.enfoque === enf).slice(0, rep[enf] || 0).forEach((s, i) => {
+        const v = s.v[(t + i) % s.v.length](d);
+        out.push(Object.assign(baseAd(tanda, out.length), {source:'plantilla', enfoque:enf, nombre:s.nombre, kind:s.kind, hip:s.hip, layout: opt.layout !== 'auto' ? opt.layout : LAYOUTS[out.length % 3], idea: pick(['smiling at the camera','touching her curls','laughing joyfully','looking over her shoulder','applying cream to her curls'], out.length + t)}, v));
+      });
+    });
+    numerar(out); tandas = tanda; ads = out.concat(ads); sel = out[0] && out[0].uid; renderAll(); persist(); out.forEach(queueImage);
+  }
+  async function otroTexto(a){
+    if (busy){ toast('Esperá a que termine la generación'); return; }
+    const prompt = `${RULES}\n\nBRIEF DEL PRODUCTO:\n${brief()}\n\nEscribí UN anuncio nuevo para Meta Ads con enfoque ${a.enfoque}, con un ángulo distinto a "${a.nombre}". No repitas estos titulares:\n${ads.slice(0, 60).map(x => '- ' + x.h).join('\n')}\n\nRespondé SOLO con un objeto JSON con esta forma:\n${SCHEMA}`;
+    busy = new AbortController(); setBusy(true); status('La IA está escribiendo otro texto para ' + a.id + '…', 'busy');
+    try {
+      const o = await aiText(prompt, busy.signal), n = normalize(Array.isArray(o) ? o[0] : o, a.tanda, 0);
+      ['nombre','kind','tag','h','s','cta','primary','title','button','hip','idea'].forEach(k => a[k] = n[k]);
+      if (!a.layoutLocked) a.layout = n.layout;
+      a.orig = snap(a); status('Texto nuevo listo para ' + a.id + '. Si querés una foto acorde, tocá "Otra foto".'); setTimeout(() => status(''), 4000);
+      renderAll(); persist();
+    } catch (e) { if (!e || e.code !== 'cancelled') status(errMsg(e), 'err'); }
+    finally { busy = null; setBusy(false); }
+  }
+  function otraFoto(a){ a.seed = Math.floor(Math.random() * 1e9); a.op = Object.assign({}, opt); queueImage(a); toast('Creando otra foto para ' + a.id + '…'); }
+  function setBusy(on){ ['#btnGen','#btnGenTop','#btnGenMore','#btnGenEmpty'].forEach(s => { const b = $(s); if (b){ b.disabled = on; } }); $('#btnGen').textContent = on ? 'Generando…' : (opt.textos === 'yo' ? 'Generar anuncios con mi texto' : ads.length ? 'Generar más anuncios' : 'Generar anuncios con IA'); $('#btnStop').hidden = !on; }
+  function status(msg, kind){
+    const el = $('#status'); if (!msg){ el.hidden = true; el.textContent = ''; return; }
+    el.hidden = false; el.className = 'status' + (kind === 'err' ? ' err' : '');
+    el.innerHTML = (kind === 'busy' ? '<span class="dot" aria-hidden="true"></span>' : '') + '<span></span>'; el.lastChild.textContent = msg;
+  }
+
+  // ---------- Dibujo del anuncio ----------
+  const SANS = "'Plus Jakarta Sans', Inter, system-ui, sans-serif", SERIF = "Fraunces, Georgia, serif";
+  function rr(ctx, x, y, w, h, r){ ctx.beginPath(); ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r); ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath(); }
+  function wrap(ctx, text, maxW){ const words = String(text).split(/[ \n\t]+/), lines = []; let line = ''; for (const w of words){ const t = line ? line + ' ' + w : w; if (ctx.measureText(t).width > maxW && line){ lines.push(line); line = w; } else line = t; } if (line) lines.push(line); return lines; }
+  function fit(ctx, text, font, size, maxW, maxLines, min){ let lines; do { ctx.font = font(size); lines = wrap(ctx, text, maxW); if (lines.length <= maxLines) break; size -= 4; } while (size > min); return {lines, size}; }
+  function lum(h){ if (!/^#[0-9a-f]{6}$/i.test(h || '')) return .5; const c = [1,3,5].map(i => parseInt(h.substr(i,2),16)/255).map(v => v <= .03928 ? v/12.92 : Math.pow((v+.055)/1.055, 2.4)); return .2126*c[0]+.7152*c[1]+.0722*c[2]; }
+  const onAcc = c => lum(c) > .42 ? '#2A1620' : '#FFFFFF';
+  const IMGS = {};
+  function imgFor(a, cb){
+    if (!a.img){ a.imgEl = null; return; }
+    let e = IMGS[a.img]; if (e && e.im.complete && e.im.naturalWidth){ a.imgEl = e.im; return; }
+    if (!e){ e = IMGS[a.img] = {im: new Image(), cbs: []}; e.im.onload = () => { const l = e.cbs; e.cbs = []; l.forEach(f => f(e.im)); }; e.im.src = a.img; }
+    e.cbs.push(im => { a.imgEl = im; cb && cb(); });
+  }
+  function draw(cv, a){
+    const W = 1080, H = FORMATOS[formato].h, k = cv.width / W, ctx = cv.getContext('2d');
+    ctx.setTransform(k, 0, 0, k, 0, 0); ctx.clearRect(0, 0, W, H);
+    const d = data(), acc = a.acc || opt.acento, display = a.font === 'elegante' ? (s => `600 ${s}px ${SERIF}`) : (s => `800 ${s}px ${SANS}`);
+    const off = (H - 1080) / 2, X = 72;
+    // Foto
+    if (a.imgEl){
+      const im = a.imgEl, ir = im.width / im.height, br = W / H; let sw, sh, sx, sy;
+      if (ir > br){ sh = im.height; sw = sh * br; sx = (im.width - sw) / 2; sy = 0; } else { sw = im.width; sh = sw / br; sx = 0; sy = (im.height - sh) / 2; }
+      ctx.drawImage(im, sx, sy, sw, sh, 0, 0, W, H);
+    } else {
+      const g = ctx.createLinearGradient(0, 0, W, H); g.addColorStop(0, a.bg || '#F7B98B'); g.addColorStop(1, '#FBEDE4'); ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+      ctx.fillStyle = 'rgba(42,22,32,.55)'; ctx.font = `600 34px ${SANS}`; ctx.textAlign = 'center';
+      const m = a.imgState === 'error' ? 'No se pudo crear la foto · tocá "Otra foto"' : a.imgState === 'cola' ? 'Foto en cola…' : a.imgState === 'cargando' ? 'La IA está creando la foto…' : 'Sin foto';
+      ctx.fillText(m, W / 2, a.layout === 'impacto' ? H * .62 : H * .36); ctx.textAlign = 'left';
+    }
+    const white = '#FFFFFF', lay = a.layout || 'editorial';
+    // Logo o cuenta arriba
+    if (a.showLogo){
+      if (logo){ const lw = 170, lh = Math.min(120, lw * logo.height / logo.width); ctx.save(); ctx.shadowColor = 'rgba(0,0,0,.25)'; ctx.shadowBlur = 12; ctx.drawImage(logo, X, 60, lw, lh); ctx.restore(); }
+    }
+    // Precio (sello)
+    if (a.showPrice && a.kind === 'price'){
+      const r = 128, cx = W - 72 - r, cy = (lay === 'impacto' ? H - 300 : 72 + r);
+      ctx.save(); ctx.shadowColor = 'rgba(0,0,0,.22)'; ctx.shadowBlur = 24; ctx.fillStyle = acc; ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+      const ink = onAcc(acc); ctx.fillStyle = ink; ctx.textAlign = 'center';
+      ctx.font = `600 30px ${SANS}`; ctx.globalAlpha = .8; ctx.fillText(d.L, cx, cy - 40); const lw = ctx.measureText(d.L).width; ctx.fillRect(cx - lw / 2, cy - 51, lw, 3); ctx.globalAlpha = 1;
+      ctx.font = `800 62px ${SANS}`; ctx.fillText(d.O, cx, cy + 26); ctx.font = `700 22px ${SANS}`; ctx.fillText(d.pct + '% OFF', cx, cy + 64); ctx.textAlign = 'left';
+    }
+    // Bloque de texto
+    const chips = [];
+    if (a.kind === 'deadline') chips.push('Termina ' + d.fin);
+    if (a.kind === 'stock') chips.push('Últimas unidades de esta tanda');
+    const ctaW = (ctx.font = `700 30px ${SANS}`, ctx.measureText(a.cta).width + 100);
+    function cta(x, y, bg, fg){ ctx.fillStyle = bg; rr(ctx, x, y, ctaW, 84, 42); ctx.fill(); ctx.fillStyle = fg; ctx.font = `700 30px ${SANS}`; ctx.fillText(a.cta, x + 36, y + 53); ctx.strokeStyle = fg; ctx.lineWidth = 5; ctx.lineCap = 'round'; ctx.beginPath(); const ax = x + ctaW - 52; ctx.moveTo(ax, y + 42); ctx.lineTo(ax + 22, y + 42); ctx.moveTo(ax + 12, y + 31); ctx.lineTo(ax + 23, y + 42); ctx.lineTo(ax + 12, y + 53); ctx.stroke(); }
+    function tagPill(x, y, bg, fg){ ctx.font = `800 22px ${SANS}`; const t = a.tag.toUpperCase(), tw = ctx.measureText(t).width + 40; ctx.fillStyle = bg; rr(ctx, x, y, tw, 46, 23); ctx.fill(); ctx.fillStyle = fg; ctx.fillText(t, x + 20, y + 31); }
+    function chipRow(x, y, bg, fg){ ctx.font = `700 26px ${SANS}`; chips.forEach(c => { const cw = ctx.measureText(c).width + 40; ctx.fillStyle = bg; rr(ctx, x, y, cw, 52, 26); ctx.fill(); ctx.fillStyle = fg; ctx.fillText(c, x + 20, y + 35); }); return chips.length ? 70 : 0; }
+    function checks(x, y, color, mark){ ctx.font = `600 30px ${SANS}`; d.beneficios.forEach((b, i) => { const cy = y + i * 48; ctx.strokeStyle = mark; ctx.lineWidth = 5; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(x, cy - 8); ctx.lineTo(x + 9, cy + 2); ctx.lineTo(x + 26, cy - 18); ctx.stroke(); ctx.fillStyle = color; ctx.fillText(b, x + 44, cy + 2); }); return a.kind === 'checks' ? d.beneficios.length * 48 + 10 : 0; }
+    if (lay === 'tarjeta'){
+      const cw = W - 96, maxW = cw - 112;
+      const hd = fit(ctx, a.h, display, a.font === 'elegante' ? 80 : 74, maxW, 3, 46);
+      ctx.font = `500 30px ${SANS}`; const sub = a.s ? wrap(ctx, a.s, maxW).slice(0, 2) : [];
+      const chH = a.kind === 'checks' ? d.beneficios.length * 48 + 10 : 0;
+      const chipH = chips.length ? 70 : 0;
+      const ch = 56 + 46 + 26 + hd.lines.length * hd.size * 1.05 + (sub.length ? 16 + sub.length * 40 : 0) + chH + chipH + 30 + 84 + 56;
+      const cy = H - 48 - ch;
+      ctx.save(); ctx.shadowColor = 'rgba(42,22,32,.25)'; ctx.shadowBlur = 40; ctx.shadowOffsetY = 12; ctx.fillStyle = '#FFFBF8'; rr(ctx, 48, cy, cw, ch, 36); ctx.fill(); ctx.restore();
+      let y = cy + 56; tagPill(48 + 56, y, acc, onAcc(acc)); y += 46 + 26;
+      ctx.fillStyle = '#2A1620'; ctx.font = display(hd.size); hd.lines.forEach(l => { y += hd.size; ctx.fillText(l, 48 + 56, y); y += hd.size * .05; });
+      if (sub.length){ y += 16; ctx.font = `500 30px ${SANS}`; ctx.fillStyle = '#6E5560'; sub.forEach(l => { y += 36; ctx.fillText(l, 48 + 56, y); y += 4; }); }
+      if (a.kind === 'checks'){ y += 44; checks(48 + 56, y, '#2A1620', acc); y += d.beneficios.length * 48 - 30; }
+      if (chips.length){ y += 22; chipRow(48 + 56, y, '#F6E6DD', '#2A1620'); y += 52; }
+      cta(48 + 56, cy + ch - 56 - 84, '#2A1620', '#FFFFFF');
+      if (a.showLogo){ ctx.font = `600 26px ${SANS}`; ctx.fillStyle = '#6E5560'; ctx.textAlign = 'right'; ctx.fillText(d.tienda, 48 + cw - 56, cy + ch - 56 - 30); ctx.textAlign = 'left'; }
+    } else if (lay === 'impacto'){
+      const g = ctx.createLinearGradient(0, 0, 0, H * .62); g.addColorStop(0, 'rgba(20,10,16,.78)'); g.addColorStop(1, 'rgba(20,10,16,0)'); ctx.fillStyle = g; ctx.fillRect(0, 0, W, H * .62);
+      const g2 = ctx.createLinearGradient(0, H - 300, 0, H); g2.addColorStop(0, 'rgba(20,10,16,0)'); g2.addColorStop(1, 'rgba(20,10,16,.6)'); ctx.fillStyle = g2; ctx.fillRect(0, H - 300, W, 300);
+      let y = (logo && a.showLogo ? 210 : 90) + off * .3;
+      tagPill(X, y, acc, onAcc(acc)); y += 46 + 20;
+      const hd = fit(ctx, a.font === 'elegante' ? a.h : a.h.toUpperCase(), display, a.font === 'elegante' ? 104 : 96, W - 2 * X, 4, 52);
+      ctx.fillStyle = white; ctx.font = display(hd.size); ctx.shadowColor = 'rgba(0,0,0,.25)'; ctx.shadowBlur = 16;
+      hd.lines.forEach(l => { y += hd.size * .98; ctx.fillText(l, X, y); }); ctx.shadowBlur = 0;
+      ctx.fillStyle = acc; ctx.fillRect(X, y + 22, 120, 10); y += 40;
+      if (a.s){ ctx.font = `500 32px ${SANS}`; ctx.fillStyle = 'rgba(255,255,255,.92)'; wrap(ctx, a.s, W - 2 * X).slice(0, 2).forEach(l => { y += 42; ctx.fillText(l, X, y); }); }
+      if (a.kind === 'checks'){ y += 56; checks(X, y, white, acc); }
+      if (chips.length){ chipRow(X, H - 72 - 84 - 70, 'rgba(255,255,255,.92)', '#2A1620'); }
+      cta(X, H - 72 - 84, acc, onAcc(acc));
+      if (a.showLogo){ ctx.font = `600 26px ${SANS}`; ctx.fillStyle = 'rgba(255,255,255,.9)'; ctx.textAlign = 'right'; ctx.fillText(d.tienda, W - X, H - 72 - 30); ctx.textAlign = 'left'; }
+    } else {
+      // editorial
+      const hd = fit(ctx, a.h, display, a.font === 'elegante' ? 96 : 86, W - 2 * X - 40, 3, 48);
+      ctx.font = `500 32px ${SANS}`; const sub = a.s ? wrap(ctx, a.s, W - 2 * X).slice(0, 2) : [];
+      const chH = a.kind === 'checks' ? d.beneficios.length * 48 + 20 : 0, chipH = chips.length ? 70 : 0;
+      const block = 46 + 22 + hd.lines.length * hd.size + (sub.length ? 14 + sub.length * 42 : 0) + chH + chipH + 36 + 84;
+      const top = H - 72 - block;
+      const g = ctx.createLinearGradient(0, top - 260, 0, H); g.addColorStop(0, 'rgba(20,10,16,0)'); g.addColorStop(.45, 'rgba(20,10,16,.55)'); g.addColorStop(1, 'rgba(20,10,16,.85)'); ctx.fillStyle = g; ctx.fillRect(0, top - 260, W, H - top + 260);
+      let y = top; tagPill(X, y, acc, onAcc(acc)); y += 46 + 22;
+      ctx.fillStyle = white; ctx.font = display(hd.size); hd.lines.forEach(l => { y += hd.size * .98; ctx.fillText(l, X, y); });
+      if (sub.length){ y += 14; ctx.font = `500 32px ${SANS}`; ctx.fillStyle = 'rgba(255,255,255,.9)'; sub.forEach(l => { y += 40; ctx.fillText(l, X, y); }); }
+      if (a.kind === 'checks'){ y += 56; checks(X, y, white, acc); y += d.beneficios.length * 48 - 28; }
+      if (chips.length){ y += 24; chipRow(X, y, 'rgba(255,255,255,.92)', '#2A1620'); }
+      cta(X, H - 72 - 84, '#FFFFFF', '#2A1620');
+      if (a.showLogo){ ctx.font = `600 26px ${SANS}`; ctx.fillStyle = 'rgba(255,255,255,.85)'; ctx.textAlign = 'right'; ctx.fillText(d.tienda, W - X, H - 72 - 30); ctx.textAlign = 'left'; }
+    }
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+  }
+
+  // ---------- Interfaz ----------
+  const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  const current = () => ads.find(a => a.uid === sel) || ads[0] || null;
+  const ICON = {
+    img: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="9" cy="9" r="2"/><path d="M21 15l-5-5L5 21"/></svg>',
+    txt: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7V5h16v2M9 19h6M12 5v14"/></svg>',
+    dl: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>',
+    cp: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>',
+    up: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21V9M7 14l5-5 5 5M5 3h14"/></svg>'
+  };
+  function renderAll(){ renderStage(); renderCtrl(); renderStrip(); renderCollage(); $('#contador').textContent = ads.length ? `${ads.length} anuncios · ${tandas} ${tandas === 1 ? 'tanda' : 'tandas'}` : ''; setBusy(!!busy); }
+  function renderStage(){
+    const a = current(); $('#empty').hidden = !!a; $('#post').hidden = !a; if (!a) return;
+    const cv = $('#cv'), H = FORMATOS[formato].h; if (cv.height !== H) cv.height = H;
+    imgFor(a, () => draw(cv, a)); draw(cv, a);
+    const d = data(); $('#pHandle').textContent = d.tienda.replace(/^@/, ''); $('#pHandle2').textContent = d.tienda.replace(/^@/, '');
+    $('#pTitle').textContent = a.title; $('#pBtn').textContent = a.button; $('#pText').textContent = a.primary;
+    const av = $('#av'); av.innerHTML = logo ? `<img src="${logo.src}" alt="">` : esc((d.marca || 'T').slice(0, 1).toUpperCase());
+  }
+  function renderCtrl(){
+    const a = current(), c = $('#ctrl'); c.hidden = !a; if (!a) return;
+    const field = (k, lab, ta) => ta ? `<label class="f">${lab}<textarea data-e="${k}" rows="2">${esc(a[k])}</textarea></label>` : `<label class="f">${lab}<input data-e="${k}" value="${esc(a[k])}"></label>`;
+    const st = {cola:'en cola', cargando:'creándose…', ok:'lista', error:'falló', propia:'propia'}[a.imgState] || 'sin foto';
+    c.innerHTML = `
+      <div class="meta-top"><span class="pill ${a.enfoque}">${a.enfoque}</span><span class="hint">Tanda ${a.tanda} · ${({ia:'texto con IA', manual:'tu texto', plantilla:'texto de plantilla'})[a.source] || ''} · foto ${st}</span></div>
+      <h2>${esc(a.id)} · ${esc(a.nombre)}</h2>
+      <p class="hip">${esc(a.hip)}</p>
+      ${a.imgState === 'error' ? `<p class="status err" style="margin:0 0 12px">No se pudo crear la foto: ${esc(a.imgErr || 'sin respuesta')}</p>` : ''}
+      <div class="row"><button class="btn accent sm" type="button" data-act="foto">${ICON.img}Otra foto</button><button class="btn sm" type="button" data-act="texto">${ICON.txt}Otro texto</button><label class="btn sm upl">${ICON.up}Subir foto<input type="file" accept="image/*" data-act="subir"></label></div>
+      <div class="group"><span class="glab">Estilo del texto</span>
+        <div class="styles">${[['editorial','Editorial','s-ed'],['impacto','Impacto','s-im'],['tarjeta','Tarjeta','s-ta']].map(([v, n, cl]) => `<button type="button" class="${cl}" data-lay="${v}" aria-pressed="${a.layout === v}"><i></i>${n}</button>`).join('')}</div>
+        <div class="seg" role="group" aria-label="Tipografía" style="align-self:flex-start">${[['moderna','Moderna'],['elegante','Elegante']].map(([v, n]) => `<button type="button" data-font="${v}" aria-pressed="${a.font === v}">${n}</button>`).join('')}</div>
+        <div><span class="glab" style="display:block;margin-bottom:8px">Color</span><div class="sw">${OPTS.acento.items.map(([v, n]) => `<button type="button" data-acc="${v}" aria-label="${n}" aria-pressed="${a.acc === v}" style="background:${v}"></button>`).join('')}</div></div>
+      </div>
+      <div class="group"><span class="glab">Textos de la imagen</span>
+        ${field('h', 'Titular', true)}${field('s', 'Bajada', true)}
+        <div class="two">${field('tag', 'Etiqueta')}${field('cta', 'Botón')}</div>
+        <label class="tog">Mostrar sello de precio<input type="checkbox" data-t="showPrice" ${a.showPrice ? 'checked' : ''} ${a.kind === 'price' ? '' : 'disabled'}></label>
+        <label class="tog">Mostrar logo y cuenta<input type="checkbox" data-t="showLogo" ${a.showLogo ? 'checked' : ''}></label>
+      </div>
+      <div class="group"><span class="glab">Textos para Meta</span>
+        ${field('primary', 'Texto principal', true)}${field('title', 'Título')}
+        <label class="f">Botón de Meta<select data-e="button">${BOTONES.map(b => `<option ${b === a.button ? 'selected' : ''}>${b}</option>`).join('')}</select></label>
+      </div>
+      <div class="group"><span class="glab">Foto</span>
+        <label class="f">Qué hace la modelo <span class="hint">en inglés; cambialo y tocá "Otra foto"</span><textarea data-e="idea" rows="2">${esc(a.idea)}</textarea></label>
+        <button class="btn sm" type="button" data-act="reset">Volver al texto original</button>
+      </div>
+      <div class="stick"><button class="btn dark" type="button" data-act="png">${ICON.dl}Descargar</button><button class="btn" type="button" data-act="copy">${ICON.cp}Copiar textos</button></div>`;
+    const redraw = () => { draw($('#cv'), a); refreshThumb(a); $('#pTitle').textContent = a.title; $('#pBtn').textContent = a.button; $('#pText').textContent = a.primary; persist(); };
+    c.querySelectorAll('[data-e]').forEach(el => el.addEventListener('input', () => { a[el.dataset.e] = el.value; redraw(); }));
+    c.querySelectorAll('[data-t]').forEach(el => el.onchange = () => { a[el.dataset.t] = el.checked; redraw(); });
+    c.querySelectorAll('[data-lay]').forEach(b => b.onclick = () => { a.layout = b.dataset.lay; a.layoutLocked = true; c.querySelectorAll('[data-lay]').forEach(x => x.setAttribute('aria-pressed', String(x === b))); redraw(); });
+    c.querySelectorAll('[data-font]').forEach(b => b.onclick = () => { a.font = b.dataset.font; a.fontLocked = true; c.querySelectorAll('[data-font]').forEach(x => x.setAttribute('aria-pressed', String(x === b))); redraw(); });
+    c.querySelectorAll('[data-acc]').forEach(b => b.onclick = () => { a.acc = b.dataset.acc; a.accLocked = true; c.querySelectorAll('[data-acc]').forEach(x => x.setAttribute('aria-pressed', String(x === b))); redraw(); });
+    c.querySelector('[data-act=foto]').onclick = () => otraFoto(a);
+    c.querySelector('[data-act=texto]').onclick = () => otroTexto(a);
+    c.querySelector('[data-act=subir]').onchange = e => { const f = e.target.files && e.target.files[0]; if (f) shrink(f, 1080).then(u => { a.img = u; a.imgEl = null; a.imgState = 'propia'; refresh(a); persist(); toast('Foto subida'); }); };
+    c.querySelector('[data-act=reset]').onclick = () => { Object.assign(a, JSON.parse(a.orig)); renderAll(); persist(); toast('Volvió al texto original'); };
+    c.querySelector('[data-act=png]').onclick = () => { if (a.tainted){ toast('Esta foto no se puede descargar sin clave: cargá una clave gratis y tocá "Otra foto"'); return; } const out = document.createElement('canvas'); out.width = 1080; out.height = FORMATOS[formato].h; draw(out, a);
+      try { out.toBlob(b => b ? save(`anuncio-${a.id}-t${a.tanda}-${formato.replace(':','x')}.png`, b) : toast('No se pudo exportar la imagen'), 'image/png'); } catch { toast('No se pudo exportar la imagen'); } };
+    c.querySelector('[data-act=copy]').onclick = () => copy(`Texto principal: ${a.primary}\nTítulo: ${a.title}\nBotón: ${a.button}`);
+  }
+  function renderStrip(){
+    const s = $('#strip'); s.hidden = !ads.length; const film = $('#film'); film.innerHTML = '';
+    let last = null; const H = FORMATOS[formato].h;
+    ads.filter(a => filtro === 'todos' || a.enfoque === filtro).forEach(a => {
+      if (a.tanda !== last){ last = a.tanda; const l = document.createElement('div'); l.className = 'tlab'; l.textContent = 'Tanda ' + a.tanda; film.appendChild(l); }
+      const b = document.createElement('button'); b.type = 'button'; b.className = 'th'; b.dataset.uid = a.uid; b.setAttribute('aria-current', String(a.uid === (current() || {}).uid));
+      b.setAttribute('aria-label', `${a.id}: ${a.h}`);
+      b.innerHTML = `<canvas width="264" height="${Math.round(264 * H / 1080)}"></canvas><span><i class="i-${a.enfoque}"></i>${esc(a.id)} · ${esc(a.nombre)}</span>`;
+      const cv = b.querySelector('canvas'); imgFor(a, () => draw(cv, a)); draw(cv, a);
+      b.onclick = () => { sel = a.uid; renderStage(); renderCtrl(); film.querySelectorAll('.th').forEach(x => x.setAttribute('aria-current', String(x === b))); if (window.innerWidth < 900) $('#post').scrollIntoView({behavior:'smooth', block:'start'}); };
+      film.appendChild(b);
+    });
+  }
+  function renderCollage(){
+    const spans = $$('#collage span'), withImg = ads.filter(a => a.img).slice(0, 4);
+    spans.forEach((sp, i) => { sp.style.backgroundImage = withImg[i] ? `url(${withImg[i].img})` : ''; });
+  }
+  function refreshThumb(a){ const b = $(`#film [data-uid="${a.uid}"] canvas`); if (b){ imgFor(a, () => draw(b, a)); draw(b, a); } }
+  function refresh(a){ refreshThumb(a); if ((current() || {}).uid === a.uid){ renderStage(); const h = $('#ctrl .meta-top .hint'); if (h){ const st = {cola:'en cola', cargando:'creándose…', ok:'lista', error:'falló', propia:'propia'}[a.imgState] || 'sin foto'; h.textContent = `Tanda ${a.tanda} · ${({ia:'texto con IA', manual:'tu texto', plantilla:'texto de plantilla'})[a.source] || ''} · foto ${st}`; } } renderCollage(); }
+  function toast(t){ const el = $('#toast'); el.textContent = t; el.classList.add('on'); clearTimeout(toast.t); toast.t = setTimeout(() => el.classList.remove('on'), 2600); }
+  async function copy(text){ try { await navigator.clipboard.writeText(text); toast('Textos copiados'); } catch { const ta = document.createElement('textarea'); ta.value = text; document.body.appendChild(ta); ta.select(); try { document.execCommand('copy'); toast('Textos copiados'); } catch { toast('No se pudo copiar'); } ta.remove(); } }
+  function save(name, blob){ const u = URL.createObjectURL(blob instanceof Blob ? blob : new Blob([blob])), l = document.createElement('a'); l.href = u; l.download = name; document.body.appendChild(l); l.click(); l.remove(); setTimeout(() => URL.revokeObjectURL(u), 3000); toast('Descargado: ' + name); }
+  function csv(){
+    if (!ads.length){ toast('Todavía no hay anuncios'); return; }
+    const q = v => '"' + String(v == null ? '' : v).replace(/ /g, ' ').replace(/"/g, '""') + '"';
+    const rows = [['Tanda','Anuncio','Enfoque','Ángulo','Titular','Texto principal','Título','Botón','Hipótesis']].concat(ads.map(a => [a.tanda, a.id, a.enfoque, a.nombre, a.h, a.primary, a.title, a.button, a.hip]));
+    save(`anuncios-${ads.length}.csv`, '﻿' + rows.map(r => r.map(q).join(',')).join('\n'));
+  }
+
+  // ---------- Guardado en el navegador ----------
+  const KEY = 'ads-infinitos-estudio-v1';
+  function persist(){
+    try {
+      const vals = {}; new FormData(form).forEach((v, k) => { if (typeof v === 'string') vals[k] = v; });
+      const imgs = {}, slim = ads.map(a => { const o = Object.assign({}, a); delete o.imgEl; if (o.img){ const k = 'i' + o.img.length + o.img.slice(-24); imgs[k] = o.img; o.img = '@' + k; } return o; });
+      const enf = enfoques(), base = {vals, opt, formato, tandas, sel, enf, pkey: key()};
+      try { localStorage.setItem(KEY, JSON.stringify(Object.assign({}, base, {ads: slim, imgs}))); }
+      catch { slim.forEach(o => delete o.img); localStorage.setItem(KEY, JSON.stringify(Object.assign({}, base, {ads: slim, imgs: {}}))); if (!persist.w){ persist.w = true; toast('Se llenó la memoria del navegador: las fotos viejas no se guardan'); } }
+    } catch {}
+  }
+  function restore(){
+    try {
+      const st = JSON.parse(localStorage.getItem(KEY) || 'null'); if (!st) return;
+      Object.entries(st.vals || {}).forEach(([k, v]) => { const el = form.elements[k]; if (el && el.type !== 'file') el.value = v; });
+      Object.assign(opt, st.opt || {}); formato = FORMATOS[st.formato] ? st.formato : '1:1'; tandas = st.tandas || 0; sel = st.sel || null;
+      if (Array.isArray(st.enf)) $$('#enfoques input').forEach(i => i.checked = st.enf.includes(i.value));
+      $('#pkey').value = st.pkey || '';
+      ads = (st.ads || []).map(o => { if (typeof o.img === 'string' && o.img[0] === '@'){ const u = (st.imgs || {})[o.img.slice(1)]; if (u) o.img = u; else delete o.img; } return o; });
+    } catch {}
+  }
+
+  // ---------- Eventos ----------
+  ['#btnGen','#btnGenTop','#btnGenMore','#btnGenEmpty'].forEach(s => $(s).onclick = () => { generar(); if (s === '#btnGenTop') $('#estudio').scrollIntoView({behavior:'smooth'}); });
+  $('#btnStop').onclick = () => busy && busy.abort();
+  $('#btnTest').onclick = async () => {
+    const out = $('#testOut'), btn = $('#btnTest'); out.hidden = false; btn.disabled = true; out.innerHTML = 'Probando la IA de texto…';
+    let txt = '', img = '';
+    try { const r = await aiText('Respondé solo con este JSON: {"ok": true}'); txt = r && r.ok ? 'Texto: funciona.' : 'Texto: responde, pero raro.'; }
+    catch (e) { txt = 'Texto: ' + (e && e.code === 'limite' ? 'límite gratis alcanzado, esperá unos segundos.' : e && e.code === 'invalid_json' ? 'responde, pero en otro formato (igual se puede usar).' : 'no conecta.'); }
+    out.innerHTML = esc(txt) + '<br>Probando la IA de imágenes… (puede tardar hasta un minuto)';
+    const k = key(), u = k ? `https://gen.pollinations.ai/image/${encodeURIComponent('a red apple on a table, photo')}?width=256&height=256&seed=${Date.now() % 1e6}&model=flux&nologo=true&key=${encodeURIComponent(k)}` : `https://image.pollinations.ai/prompt/${encodeURIComponent('a red apple on a table, photo')}?width=256&height=256&seed=${Date.now() % 1e6}&model=flux&nologo=true`;
+    const r = await loadImage(u);
+    if (r.data || r.remote) img = `Imágenes: funcionan${r.remote ? ' (pero no se podrán descargar sin clave)' : ''}.<br><img src="${esc(r.data || r.remote)}" alt="Imagen de prueba" style="width:96px;height:96px;border-radius:10px;margin-top:6px">`;
+    else if (r.retry) img = `Imágenes: llegaste al límite gratis (código ${r.code}). Esperá ${r.retry} segundos, o cargá una clave gratis.`;
+    else if (r.fatal) img = `Imágenes: la IA rechazó el pedido (código ${r.code}). La clave no es válida o no tiene saldo.`;
+    else img = 'Imágenes: no funcionan (' + esc(r.err || 'sin respuesta') + '). Cargá una clave gratis de Pollinations.';
+    out.innerHTML = esc(txt) + '<br>' + img; btn.disabled = false;
+  };
+  $('#pkey').addEventListener('change', () => { persist(); toast('Clave guardada en este navegador'); });
+  $('#btnCsv').onclick = csv;
+  $('#btnReset').onclick = () => { try { localStorage.removeItem(KEY); } catch {} location.reload(); };
+  $$('#fmt button').forEach(b => b.onclick = () => { formato = b.dataset.f; $$('#fmt button').forEach(x => x.setAttribute('aria-pressed', String(x === b))); renderAll(); persist(); });
+  $$('[data-fil]').forEach(b => b.onclick = () => { filtro = b.dataset.fil; $$('[data-fil]').forEach(x => x.setAttribute('aria-pressed', String(x === b))); renderStrip(); });
+  let tmr; form.addEventListener('input', e => { if (e.target.type === 'file') return; clearTimeout(tmr); tmr = setTimeout(() => { renderStage(); renderStrip(); persist(); }, 300); });
+  form.addEventListener('submit', e => e.preventDefault());
+  $('#enfoques').addEventListener('change', persist);
+  form.logo.addEventListener('change', e => { const f = e.target.files && e.target.files[0]; if (!f) return; const u = URL.createObjectURL(f), im = new Image(); im.onload = () => { logo = im; const t = $('#thumbLogo'); t.src = u; t.hidden = false; renderAll(); }; im.src = u; });
+
+  restore(); renderOpts();
+  $$('#fmt button').forEach(x => x.setAttribute('aria-pressed', String(x.dataset.f === formato)));
+  renderAll();
+  ads.filter(a => a.imgState === 'cola' || a.imgState === 'cargando').forEach(queueImage);
+  if (document.fonts){ Promise.all([document.fonts.load(`800 40px 'Plus Jakarta Sans'`), document.fonts.load(`600 40px Fraunces`)]).then(() => renderAll()).catch(() => {}); }
+})();
+</script>
+</body>
+</html>
