@@ -323,8 +323,9 @@
       <button class="chip" type="button" data-fil="precio" aria-pressed="false">Precio</button>
       <button class="chip" type="button" data-fil="calidad" aria-pressed="false">Calidad</button>
       <button class="chip" type="button" data-fil="urgencia" aria-pressed="false">Urgencia</button>
+      <button class="chip" type="button" data-fil="fav" aria-pressed="false">★ Favoritos</button>
     </div>
-    <button class="btn primary sm" type="button" id="btnGenMore">Generar más</button>
+    <div class="row"><button class="btn sm" type="button" id="btnDlFav">Descargar favoritos</button><button class="btn primary sm" type="button" id="btnGenMore">Generar más</button></div>
   </div>
   <div class="film" id="film"></div>
 </section>
@@ -639,7 +640,7 @@ Reglas:
   // ---------- Crear anuncios ----------
   const uid = () => Math.random().toString(36).slice(2, 9);
   function baseAd(tanda, i){
-    return {uid: uid(), tanda, seed: Math.floor(Math.random() * 1e9), op: Object.assign({}, opt), acc: opt.acento, font: opt.tipo, showPrice: true, showLogo: true};
+    return {uid: uid(), tanda, seed: Math.floor(Math.random() * 1e9), op: Object.assign({}, opt), acc: opt.acento, font: opt.tipo, showPrice: true, showLogo: true, showProd: true, prodPos: 'der', prodSize: 'M', fav: false};
   }
   function normalize(o, tanda, i){
     o = o || {}; const t = v => String(v == null ? '' : v).trim();
@@ -710,7 +711,7 @@ Reglas:
     } catch (e) { if (!e || e.code !== 'cancelled') status(errMsg(e), 'err'); }
     finally { busy = null; setBusy(false); }
   }
-  function otraFoto(a){ a.seed = Math.floor(Math.random() * 1e9); a.op = Object.assign({}, opt); queueImage(a); toast('Creando otra foto para ' + a.id + '…'); }
+  function otraFoto(a){ a.seed = Math.floor(Math.random() * 1e9); a.op = a.op || Object.assign({}, opt); queueImage(a); toast('Creando otra foto para ' + a.id + '…'); }
   function setBusy(on){ ['#btnGen','#btnGenTop','#btnGenMore','#btnGenEmpty'].forEach(s => { const b = $(s); if (b){ b.disabled = on; } }); $('#btnGen').textContent = on ? 'Generando…' : (opt.textos === 'yo' ? 'Generar anuncios con mi texto' : ads.length ? 'Generar más anuncios' : 'Generar anuncios con IA'); $('#btnStop').hidden = !on; }
   function status(msg, kind){
     const el = $('#status'); if (!msg){ el.hidden = true; el.textContent = ''; return; }
@@ -751,6 +752,21 @@ Reglas:
     else { for (let k = -1; k <= 1; k++){ ctx.moveTo(cx - 16 + k * 2, cy + k * 12); ctx.bezierCurveTo(cx - 6, cy - 8 + k * 12, cx + 6, cy + 8 + k * 12, cx + 16, cy + k * 12); } }
     ctx.stroke(); ctx.restore();
   }
+  function drawProd(ctx, a, W, H, yBottom, base){
+    if (!prodImg || a.showProd === false) return;
+    const mult = {S:.7, M:1, L:1.3}[a.prodSize || 'M'] || 1;
+    let ph = Math.min(base * mult, H * .42), pw = ph * prodImg.width / prodImg.height;
+    if (pw > W * .48){ pw = W * .48; ph = pw * prodImg.height / prodImg.width; }
+    const x = a.prodPos === 'izq' ? 56 : W - pw - 56, y = yBottom - ph;
+    ctx.save(); ctx.fillStyle = 'rgba(0,0,0,.18)'; ctx.filter = 'blur(14px)'; ctx.beginPath(); ctx.ellipse(x + pw / 2, yBottom - 4, pw * .42, 16, 0, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+    ctx.save(); ctx.shadowColor = 'rgba(0,0,0,.22)'; ctx.shadowBlur = 24; ctx.shadowOffsetY = 10; ctx.drawImage(prodImg, x, y, pw, ph); ctx.restore();
+  }
+  function brandMark(ctx, a, W, d){
+    if (!a.showLogo) return;
+    if (logo){ const lh = 84, lw = Math.min(320, lh * logo.width / logo.height); ctx.save(); ctx.shadowColor = 'rgba(0,0,0,.2)'; ctx.shadowBlur = 12; ctx.drawImage(logo, (W - lw) / 2, 50, lw, lh); ctx.restore(); return; }
+    const t = (d.marca || '').toLowerCase().replace(/\s+/g, ''); ctx.font = `800 40px ${SANS}`; const w = ctx.measureText(t).width + 56;
+    ctx.fillStyle = 'rgba(255,255,255,.93)'; rr(ctx, (W - w) / 2, 52, w, 66, 33); ctx.fill(); ctx.fillStyle = '#1B1418'; ctx.textAlign = 'center'; ctx.fillText(t, W / 2, 99); ctx.textAlign = 'left';
+  }
   function drawPop(ctx, a, W, H, d, acc){
     const bg = a.bg || '#F7C6D9', ink = '#1B1418', X = 70;
     ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
@@ -778,15 +794,14 @@ Reglas:
     ctx.restore(); y += 70;
     if (a.s){ ctx.fillStyle = ink; ctx.font = `500 36px ${SANS}`; wrap(ctx, a.s, W - 2 * X - 120).slice(0, 2).forEach(l => { ctx.fillText(l, X + 6, y); y += 46; }); }
     // Producto real
-    if (prodImg){ const ph = Math.min(520, H * .30), pw = Math.min(W * .42, ph * prodImg.width / prodImg.height), ph2 = pw * prodImg.height / prodImg.width; const bx = W - pw - 56, by0 = H - 210 - ph2; ctx.save(); ctx.fillStyle = 'rgba(0,0,0,.18)'; ctx.filter = 'blur(14px)'; ctx.beginPath(); ctx.ellipse(bx + pw / 2, by0 + ph2 - 4, pw * .42, 16, 0, 0, Math.PI * 2); ctx.fill(); ctx.restore(); ctx.save(); ctx.shadowColor = 'rgba(0,0,0,.22)'; ctx.shadowBlur = 24; ctx.shadowOffsetY = 10; ctx.drawImage(prodImg, bx, by0, pw, ph2); ctx.restore(); }
-    if (false){ const ph = 0, pw = 0; ctx.save(); ctx.shadowColor = 'rgba(0,0,0,.25)'; ctx.shadowBlur = 30; ctx.shadowOffsetY = 14; ctx.drawImage(prodImg, W - pw - 50, H - 230 - ph, pw, ph); ctx.restore(); }
+    drawProd(ctx, a, W, H, H - 210, 520);
     // Sticker / banda según el tipo
     const sr = 112, sx2 = W - X - sr + 10, sy2 = pTop + 40;
     if (a.kind === 'price' && a.showPrice){
       ctx.save(); ctx.translate(sx2, sy2); ctx.rotate(.12); ctx.fillStyle = acc; ctx.beginPath(); ctx.arc(0, 0, sr + 10, 0, Math.PI * 2); ctx.fill();
       const ik = onAcc(acc); ctx.fillStyle = ik; ctx.textAlign = 'center'; ctx.font = `400 34px ${SCRIPT}`; ctx.fillText('antes ' + d.L, 0, -34); ctx.font = `400 74px ${SCRIPT}`; ctx.fillText(d.O, 0, 36); ctx.restore(); ctx.textAlign = 'left';
     } else if (a.kind === 'deadline' || a.kind === 'stock' || a.enfoque === 'urgencia'){
-      const txt = a.kind === 'stock' ? '¡Últimas unidades!' : '¡No te la pierdas!';
+      const txt = a.band || (a.kind === 'stock' ? '¡Últimas unidades!' : '¡No te la pierdas!');
       ctx.font = `400 56px ${SCRIPT}`; const tw = ctx.measureText(txt).width + 70, by = H - 360;
       brush(ctx, (W - tw) / 2, by, tw, 92, ink, -0.06, a.seed); ctx.save(); ctx.translate(W / 2, by + 46); ctx.rotate(-0.06); ctx.fillStyle = '#fff'; ctx.textAlign = 'center'; ctx.fillText(txt, 0, 18); ctx.restore(); ctx.textAlign = 'left';
       if (a.kind === 'deadline'){ ctx.fillStyle = ink; ctx.font = `600 30px ${SANS}`; ctx.textAlign = 'center'; ctx.fillText('Hasta ' + d.fin, W / 2, by + 150); ctx.textAlign = 'left'; }
@@ -797,8 +812,8 @@ Reglas:
     }
     // Íconos de beneficios
     if (a.kind === 'checks'){
-      const by = H - 380, bw = W - 2 * X - (prodImg ? W * .42 - 20 : 0); ctx.fillStyle = 'rgba(255,255,255,.88)'; rr(ctx, X, by, bw, 170, 28); ctx.fill();
-      d.beneficios.slice(0, 3).forEach((b, i) => { const cx = X + bw * (i + .5) / 3; icono(ctx, cx, by + 62, i, ink); ctx.fillStyle = ink; ctx.font = `600 24px ${SANS}`; ctx.textAlign = 'center'; ctx.fillText(b.length > 22 ? b.slice(0, 21) + '…' : b, cx, by + 138); });
+      const by = H - 380, bw = W - 2 * X - (prodImg && a.showProd !== false ? W * .42 - 20 : 0), bx0 = prodImg && a.showProd !== false && a.prodPos === 'izq' ? W - X - bw : X; ctx.fillStyle = 'rgba(255,255,255,.88)'; rr(ctx, bx0, by, bw, 170, 28); ctx.fill();
+      d.beneficios.slice(0, 3).forEach((b, i) => { const cx = bx0 + bw * (i + .5) / 3; icono(ctx, cx, by + 62, i, ink); ctx.fillStyle = ink; ctx.font = `600 24px ${SANS}`; ctx.textAlign = 'center'; ctx.fillText(b.length > 22 ? b.slice(0, 21) + '…' : b, cx, by + 138); });
       ctx.textAlign = 'left';
     }
     // Botón negro centrado
@@ -824,10 +839,7 @@ Reglas:
       ctx.fillText(m, W / 2, a.layout === 'impacto' ? H * .62 : H * .36); ctx.textAlign = 'left';
     }
     const white = '#FFFFFF', lay = a.layout || 'editorial';
-    // Logo o cuenta arriba
-    if (a.showLogo){
-      if (logo){ const lw = 170, lh = Math.min(120, lw * logo.height / logo.width); ctx.save(); ctx.shadowColor = 'rgba(0,0,0,.25)'; ctx.shadowBlur = 12; ctx.drawImage(logo, X, 60, lw, lh); ctx.restore(); }
-    }
+
     // Precio (sello)
     if (a.showPrice && a.kind === 'price'){
       const r = 128, cx = W - 72 - r, cy = (lay === 'impacto' ? H - 300 : 72 + r);
@@ -853,6 +865,7 @@ Reglas:
       const chipH = chips.length ? 70 : 0;
       const ch = 56 + 46 + 26 + hd.lines.length * hd.size * 1.05 + (sub.length ? 16 + sub.length * 40 : 0) + chH + chipH + 30 + 84 + 56;
       const cy = H - 48 - ch;
+      drawProd(ctx, a, W, H, cy + 60, 380);
       ctx.save(); ctx.shadowColor = 'rgba(42,22,32,.25)'; ctx.shadowBlur = 40; ctx.shadowOffsetY = 12; ctx.fillStyle = '#FFFBF8'; rr(ctx, 48, cy, cw, ch, 36); ctx.fill(); ctx.restore();
       let y = cy + 56; tagPill(48 + 56, y, acc, onAcc(acc)); y += 46 + 26;
       ctx.fillStyle = '#2A1620'; ctx.font = display(hd.size); hd.lines.forEach(l => { y += hd.size; ctx.fillText(l, 48 + 56, y); y += hd.size * .05; });
@@ -864,7 +877,7 @@ Reglas:
     } else if (lay === 'impacto'){
       const g = ctx.createLinearGradient(0, 0, 0, H * .62); g.addColorStop(0, 'rgba(20,10,16,.78)'); g.addColorStop(1, 'rgba(20,10,16,0)'); ctx.fillStyle = g; ctx.fillRect(0, 0, W, H * .62);
       const g2 = ctx.createLinearGradient(0, H - 300, 0, H); g2.addColorStop(0, 'rgba(20,10,16,0)'); g2.addColorStop(1, 'rgba(20,10,16,.6)'); ctx.fillStyle = g2; ctx.fillRect(0, H - 300, W, 300);
-      let y = (logo && a.showLogo ? 210 : 90) + off * .3;
+      let y = (a.showLogo ? 160 : 90) + off * .3;
       tagPill(X, y, acc, onAcc(acc)); y += 46 + 20;
       const hd = fit(ctx, a.font === 'elegante' ? a.h : a.h.toUpperCase(), display, a.font === 'elegante' ? 104 : 96, W - 2 * X, 4, 52);
       ctx.fillStyle = white; ctx.font = display(hd.size); ctx.shadowColor = 'rgba(0,0,0,.25)'; ctx.shadowBlur = 16;
@@ -873,6 +886,7 @@ Reglas:
       if (a.s){ ctx.font = `500 32px ${SANS}`; ctx.fillStyle = 'rgba(255,255,255,.92)'; wrap(ctx, a.s, W - 2 * X).slice(0, 2).forEach(l => { y += 42; ctx.fillText(l, X, y); }); }
       if (a.kind === 'checks'){ y += 56; checks(X, y, white, acc); }
       if (chips.length){ chipRow(X, H - 72 - 84 - 70, 'rgba(255,255,255,.92)', '#2A1620'); }
+      drawProd(ctx, a, W, H, H - 60, 420);
       cta(X, H - 72 - 84, acc, onAcc(acc));
       if (a.showLogo){ ctx.font = `600 26px ${SANS}`; ctx.fillStyle = 'rgba(255,255,255,.9)'; ctx.textAlign = 'right'; ctx.fillText(d.tienda, W - X, H - 72 - 30); ctx.textAlign = 'left'; }
     } else {
@@ -882,6 +896,7 @@ Reglas:
       const chH = a.kind === 'checks' ? d.beneficios.length * 48 + 20 : 0, chipH = chips.length ? 70 : 0;
       const block = 46 + 22 + hd.lines.length * hd.size + (sub.length ? 14 + sub.length * 42 : 0) + chH + chipH + 36 + 84;
       const top = H - 72 - block;
+      drawProd(ctx, a, W, H, top - 10, 360);
       const g = ctx.createLinearGradient(0, top - 260, 0, H); g.addColorStop(0, 'rgba(20,10,16,0)'); g.addColorStop(.45, 'rgba(20,10,16,.55)'); g.addColorStop(1, 'rgba(20,10,16,.85)'); ctx.fillStyle = g; ctx.fillRect(0, top - 260, W, H - top + 260);
       let y = top; tagPill(X, y, acc, onAcc(acc)); y += 46 + 22;
       ctx.fillStyle = white; ctx.font = display(hd.size); hd.lines.forEach(l => { y += hd.size * .98; ctx.fillText(l, X, y); });
@@ -891,6 +906,7 @@ Reglas:
       cta(X, H - 72 - 84, '#FFFFFF', '#2A1620');
       if (a.showLogo){ ctx.font = `600 26px ${SANS}`; ctx.fillStyle = 'rgba(255,255,255,.85)'; ctx.textAlign = 'right'; ctx.fillText(d.tienda, W - X, H - 72 - 30); ctx.textAlign = 'left'; }
     }
+    brandMark(ctx, a, W, d);
     ctx.setTransform(1, 0, 0, 1, 0, 0);
   }
 
@@ -920,6 +936,7 @@ Reglas:
     c.innerHTML = `
       <div class="meta-top"><span class="pill ${a.enfoque}">${a.enfoque}</span><span class="hint">Tanda ${a.tanda} · ${({ia:'texto con IA', manual:'tu texto', plantilla:'texto de plantilla'})[a.source] || ''} · foto ${st}</span></div>
       <h2>${esc(a.id)} · ${esc(a.nombre)}</h2>
+      <div class="row" style="margin:8px 0 2px"><button class="btn sm" type="button" data-act="fav" aria-pressed="${!!a.fav}">${a.fav ? '★ Favorito' : '☆ Marcar favorito'}</button><button class="btn sm" type="button" data-act="dup">Duplicar</button><button class="btn sm" type="button" data-act="del">Eliminar</button></div>
       <p class="hip">${esc(a.hip)}</p>
       ${a.imgState === 'error' ? `<p class="status err" style="margin:0 0 12px">No se pudo crear la foto: ${esc(a.imgErr || 'sin respuesta')}</p>` : ''}
       <div class="row"><button class="btn accent sm" type="button" data-act="foto">${ICON.img}Otra foto</button><button class="btn sm" type="button" data-act="texto">${ICON.txt}Otro texto</button><label class="btn sm upl">${ICON.up}Subir foto<input type="file" accept="image/*" data-act="subir"></label></div>
@@ -932,13 +949,24 @@ Reglas:
         ${field('h', 'Titular', true)}${field('s', 'Bajada', true)}
         <div class="two">${field('tag', 'Etiqueta')}${field('cta', 'Botón')}</div>
         <label class="tog">Mostrar sello de precio<input type="checkbox" data-t="showPrice" ${a.showPrice ? 'checked' : ''} ${a.kind === 'price' ? '' : 'disabled'}></label>
-        <label class="tog">Mostrar logo y cuenta<input type="checkbox" data-t="showLogo" ${a.showLogo ? 'checked' : ''}></label>
+        <label class="tog">Mostrar marca (Salon Line / logo)<input type="checkbox" data-t="showLogo" ${a.showLogo ? 'checked' : ''}></label>
+      </div>
+      <div class="group"><span class="glab">Producto en este anuncio</span>
+        ${prodImg ? `<label class="tog">Mostrar mi producto<input type="checkbox" data-t="showProd" ${a.showProd !== false ? 'checked' : ''}></label>
+        <div class="f" style="gap:6px"><span>Posición</span><div class="opt">${[['izq','Izquierda'],['der','Derecha']].map(([v, t]) => `<button type="button" data-pp="prodPos" data-v="${v}" aria-pressed="${(a.prodPos || 'der') === v}">${t}</button>`).join('')}</div></div>
+        <div class="f" style="gap:6px"><span>Tamaño</span><div class="opt">${[['S','Chico'],['M','Mediano'],['L','Grande']].map(([v, t]) => `<button type="button" data-pp="prodSize" data-v="${v}" aria-pressed="${(a.prodSize || 'M') === v}">${t}</button>`).join('')}</div></div>` : '<p class="hint" style="margin:0">Subí la foto real del producto en el panel izquierdo (sección Producto) y vas a poder ubicarla en cada anuncio.</p>'}
+        ${a.enfoque === 'urgencia' || a.kind === 'deadline' || a.kind === 'stock' ? `<label class="f">Frase de urgencia<input data-e="band" value="${esc(a.band || (a.kind === 'stock' ? '¡Últimas unidades!' : '¡No te la pierdas!'))}"></label>` : ''}
+        <div class="f" style="gap:6px"><span>Enfoque</span><div class="opt">${['precio','calidad','urgencia'].map(v => `<button type="button" data-enf="${v}" aria-pressed="${a.enfoque === v}">${v[0].toUpperCase() + v.slice(1)}</button>`).join('')}</div></div>
+        <div class="f" style="gap:6px"><span>Elemento destacado</span><div class="opt">${[['price','Sello de precio'],['checks','Íconos de beneficios'],['deadline','Fecha límite'],['stock','Stock'],['none','Ninguno']].map(([v, t]) => `<button type="button" data-kind="${v}" aria-pressed="${a.kind === v}">${t}</button>`).join('')}</div></div>
       </div>
       <div class="group"><span class="glab">Textos para Meta</span>
         ${field('primary', 'Texto principal', true)}${field('title', 'Título')}
         <label class="f">Botón de Meta<select data-e="button">${BOTONES.map(b => `<option ${b === a.button ? 'selected' : ''}>${b}</option>`).join('')}</select></label>
       </div>
-      <div class="group"><span class="glab">Foto</span>
+      <div class="group"><span class="glab">Foto de este anuncio</span>
+        <p class="hint" style="margin:-4px 0 0">Elegí cómo querés la foto de ESTE anuncio y tocá "Crear foto con estas opciones".</p>
+        ${[['escena','Escena'],['fondo','Color de fondo'],['foto','Estilo de foto'],['edad','Edad'],['rulo','Tipo de rulo'],['piel','Tono de piel'],['personas','Personas'],['pote','Pote genérico']].map(([k, n]) => `<div class="f" style="gap:6px"><span>${n}</span><div class="opt">${OPTS[k].items.map(([v, t]) => `<button type="button" data-po="${k}" data-v="${v}" aria-pressed="${(a.op || opt)[k] === v}">${k === 'fondo' && FONDOS[v] ? `<b style="background:${FONDOS[v][0]}"></b>` : ''}${t}</button>`).join('')}</div></div>`).join('')}
+        <button class="btn accent sm" type="button" data-act="foto2">${ICON.img}Crear foto con estas opciones</button>
         <label class="f">Qué hace la modelo <span class="hint">en inglés; cambialo y tocá "Otra foto"</span><textarea data-e="idea" rows="2">${esc(a.idea)}</textarea></label>
         <button class="btn sm" type="button" data-act="reset">Volver al texto original</button>
       </div>
@@ -952,6 +980,14 @@ Reglas:
     c.querySelector('[data-act=foto]').onclick = () => otraFoto(a);
     c.querySelector('[data-act=texto]').onclick = () => otroTexto(a);
     c.querySelector('[data-act=subir]').onchange = e => { const f = e.target.files && e.target.files[0]; if (f) shrink(f, 1080).then(u => { a.img = u; a.imgEl = null; a.imgState = 'propia'; refresh(a); persist(); toast('Foto subida'); }); };
+    c.querySelectorAll('[data-po]').forEach(b => b.onclick = () => { a.op = Object.assign({}, a.op || opt); a.op[b.dataset.po] = b.dataset.v; if (b.dataset.po === 'fondo' && FONDOS[b.dataset.v]) a.bg = FONDOS[b.dataset.v][0]; c.querySelectorAll(`[data-po="${b.dataset.po}"]`).forEach(x => x.setAttribute('aria-pressed', String(x === b))); redraw(); });
+    c.querySelector('[data-act=foto2]').onclick = () => { a.seed = Math.floor(Math.random() * 1e9); queueImage(a); toast('Creando la foto de ' + a.id + ' con tus opciones…'); };
+    c.querySelectorAll('[data-pp]').forEach(b => b.onclick = () => { a[b.dataset.pp] = b.dataset.v; c.querySelectorAll(`[data-pp="${b.dataset.pp}"]`).forEach(x => x.setAttribute('aria-pressed', String(x === b))); redraw(); });
+    c.querySelectorAll('[data-enf]').forEach(b => b.onclick = () => { a.enfoque = b.dataset.enf; renderCtrl(); renderStrip(); redraw(); });
+    c.querySelectorAll('[data-kind]').forEach(b => b.onclick = () => { a.kind = b.dataset.kind; renderCtrl(); redraw(); });
+    c.querySelector('[data-act=fav]').onclick = () => { a.fav = !a.fav; renderCtrl(); renderStrip(); persist(); };
+    c.querySelector('[data-act=dup]').onclick = () => { const n = JSON.parse(JSON.stringify(Object.assign({}, a, {imgEl: undefined}))); n.uid = uid(); n.id = a.id + 'b'; n.op = Object.assign({}, a.op); ads.splice(ads.indexOf(a) + 1, 0, n); sel = n.uid; renderAll(); persist(); toast('Duplicado: cambiá lo que quieras en ' + n.id); };
+    c.querySelector('[data-act=del]').onclick = () => { const i = ads.indexOf(a); ads.splice(i, 1); sel = (ads[i] || ads[i - 1] || {}).uid || null; renderAll(); persist(); toast('Anuncio eliminado'); };
     c.querySelector('[data-act=reset]').onclick = () => { Object.assign(a, JSON.parse(a.orig)); renderAll(); persist(); toast('Volvió al texto original'); };
     c.querySelector('[data-act=png]').onclick = () => { if (a.tainted){ toast('Esta foto no se puede descargar sin clave: cargá una clave gratis y tocá "Otra foto"'); return; } const out = document.createElement('canvas'); out.width = 1080; out.height = FORMATOS[formato].h; draw(out, a);
       try { out.toBlob(b => b ? save(`anuncio-${a.id}-t${a.tanda}-${formato.replace(':','x')}.png`, b) : toast('No se pudo exportar la imagen'), 'image/png'); } catch { toast('No se pudo exportar la imagen'); } };
@@ -960,11 +996,11 @@ Reglas:
   function renderStrip(){
     const s = $('#strip'); s.hidden = !ads.length; const film = $('#film'); film.innerHTML = '';
     let last = null; const H = FORMATOS[formato].h;
-    ads.filter(a => filtro === 'todos' || a.enfoque === filtro).forEach(a => {
+    ads.filter(a => filtro === 'todos' || (filtro === 'fav' ? a.fav : a.enfoque === filtro)).forEach(a => {
       if (a.tanda !== last){ last = a.tanda; const l = document.createElement('div'); l.className = 'tlab'; l.textContent = 'Tanda ' + a.tanda; film.appendChild(l); }
       const b = document.createElement('button'); b.type = 'button'; b.className = 'th'; b.dataset.uid = a.uid; b.setAttribute('aria-current', String(a.uid === (current() || {}).uid));
       b.setAttribute('aria-label', `${a.id}: ${a.h}`);
-      b.innerHTML = `<canvas width="264" height="${Math.round(264 * H / 1080)}"></canvas><span><i class="i-${a.enfoque}"></i>${esc(a.id)} · ${esc(a.nombre)}</span>`;
+      b.innerHTML = `<canvas width="264" height="${Math.round(264 * H / 1080)}"></canvas><span><i class="i-${a.enfoque}"></i>${a.fav ? '★ ' : ''}${esc(a.id)} · ${esc(a.nombre)}</span>`;
       const cv = b.querySelector('canvas'); imgFor(a, () => draw(cv, a)); draw(cv, a);
       b.onclick = () => { sel = a.uid; renderStage(); renderCtrl(); film.querySelectorAll('.th').forEach(x => x.setAttribute('aria-current', String(x === b))); if (window.innerWidth < 900) $('#post').scrollIntoView({behavior:'smooth', block:'start'}); };
       film.appendChild(b);
@@ -1027,6 +1063,11 @@ Reglas:
   };
   $('#pkey').addEventListener('change', () => { persist(); toast('Clave guardada en este navegador'); });
   $('#btnCsv').onclick = csv;
+  $('#btnDlFav').onclick = async () => {
+    const favs = ads.filter(a => a.fav); if (!favs.length){ toast('Marcá anuncios con ☆ para descargarlos juntos'); return; }
+    for (const a of favs){ if (a.tainted) continue; await new Promise(res => imgFor(a, res) || setTimeout(res, 50)); const out = document.createElement('canvas'); out.width = 1080; out.height = FORMATOS[formato].h; draw(out, a);
+      await new Promise(res => out.toBlob(b => { if (b) save(`anuncio-${a.id}-t${a.tanda}-${formato.replace(':','x')}.png`, b); setTimeout(res, 700); }, 'image/png')); }
+  };
   $('#btnReset').onclick = () => { try { localStorage.removeItem(KEY); } catch {} location.reload(); };
   $$('#fmt button').forEach(b => b.onclick = () => { formato = b.dataset.f; $$('#fmt button').forEach(x => x.setAttribute('aria-pressed', String(x === b))); renderAll(); persist(); });
   $$('[data-fil]').forEach(b => b.onclick = () => { filtro = b.dataset.fil; $$('[data-fil]').forEach(x => x.setAttribute('aria-pressed', String(x === b))); renderStrip(); });
