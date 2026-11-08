@@ -226,7 +226,8 @@
             <label class="f">Usos por envase<input name="usos" inputmode="numeric" value="25"></label>
           </div>
           <label class="f">Foto real del producto <span class="hint">opcional · ideal PNG sin fondo (aparece en el estilo Marcador)</span>
-            <span class="file"><input type="file" id="prodFile" accept="image/*"><img id="thumbProd" alt="" hidden></span>
+            <span class="file"><input type="file" id="prodFile" accept="image/*"><img id="thumbProd" alt="" hidden style="background:repeating-conic-gradient(#eee 0 25%,#fff 0 50%) 0 0/12px 12px;object-fit:contain"></span>
+            <button class="btn sm" type="button" id="prodClear">Quitar producto</button>
           </label>
           <label class="f">Beneficios <span class="hint">separados por coma</span><input name="beneficios" value="Define cada rulo, Hidrata sin apelmazar, Controla el frizz"></label>
         </div>
@@ -356,7 +357,7 @@
     rulo: {def:'variado', items:[['variado','Variado'],['ondas','Ondas'],['rulos','Rulos'],['afro','Afro / coily']]},
     piel: {def:'variado', items:[['variado','Variado'],['clara','Clara'],['trigueña','Trigueña'],['morena','Morena'],['negra','Negra']]},
     personas: {def:'una', items:[['una','Una mujer'],['dos','Dos amigas']]},
-    pote: {def:'si', items:[['si','Con el pote en mano'],['no','Sin producto']]},
+    pote: {def:'si', items:[['si','Pote genérico de la IA'],['no','Sin pote (uso mi foto del producto)']]},
     layout: {def:'pop', items:[['pop','Marcador'],['auto','Que elija la IA'],['editorial','Editorial'],['impacto','Impacto'],['tarjeta','Tarjeta']]},
     tipo: {def:'moderna', items:[['moderna','Moderna'],['elegante','Elegante']]},
     acento: {def:'#D9434F', items:[['#D9434F','Coral'],['#A8306E','Fucsia'],['#E8553A','Naranja'],['#2F6B4F','Verde'],['#2A1620','Negro'],['#6B4FA0','Violeta']]}
@@ -558,9 +559,10 @@ Reglas:
     };
     const ropa = pick(['a colorful casual cotton t-shirt','a light linen button-up blouse','a cozy pastel knit sweater','a denim jacket over a white tee','a flowy summer blouse with sleeves'], s >> 9);
     const persona = o.personas === 'dos' ? `two fictional smiling women friends in casual everyday clothes, one ${edad} with ${rulo} and ${piel}, both with defined curly hair` : `a fictional ${edad} woman with ${rulo} and ${piel}, wearing ${ropa}`;
-    const pote = o.pote === 'si' ? ', happily showing a small plain white jar of hair cream to the camera at chest height' : '';
+    const pote = (o.pote === 'si' && !prodImg) ? ', happily showing a small plain white jar of hair cream to the camera at chest height' : '';
     const estilo = {editorial:'bright cheerful hair care advertising photo for a family-friendly cosmetics brand', natural:'bright authentic lifestyle photo for a hair care brand', minimal:'clean bright minimalist studio photo for a hair care brand'}[o.foto] || 'bright cheerful hair care advertising photo';
-    const comp = (a.layout === 'impacto' || a.layout === 'pop') ? 'subject placed in the lower two thirds, calm empty background space at the top for a headline' : 'subject in the upper two thirds, calm empty space in the lower third for text';
+    const libre = prodImg ? ', empty hands touching her hair, nothing in her hands, no bottles or jars in the scene, clear space in the lower right corner' : '';
+    const comp = libre + ((a.layout === 'impacto' || a.layout === 'pop') ? 'subject placed in the lower two thirds, calm empty background space at the top for a headline' : 'subject in the upper two thirds, calm empty space in the lower third for text');
     return `${estilo} of ${persona}${pote}, ${ideaSegura(a.idea, a.seed)}, ${escenas[o.escena] || escenas.color}, ${comp}, warm genuine smile, friendly and confident, modest and fully clothed, focus on her healthy defined curly hair, real photograph of a real-looking person, natural skin texture with pores, natural makeup, shot on a full-frame DSLR with an 85mm lens, shallow depth of field, candid commercial photography, not an illustration, not anime, not a 3D render, not CGI, bright high-key lighting, airy pastel colors, sharp focus, no text, no letters, no logos, no watermark`;
   }
   const IDEAS_OK = ['smiling at the camera','touching her curls with both hands','laughing joyfully','looking over her shoulder with a smile','playing with a curl and smiling','eyes closed, enjoying the moment, smiling','confident pose with a big smile','showing her curls proudly'];
@@ -776,7 +778,8 @@ Reglas:
     ctx.restore(); y += 70;
     if (a.s){ ctx.fillStyle = ink; ctx.font = `500 36px ${SANS}`; wrap(ctx, a.s, W - 2 * X - 120).slice(0, 2).forEach(l => { ctx.fillText(l, X + 6, y); y += 46; }); }
     // Producto real
-    if (prodImg){ const ph = Math.min(420, H * .26), pw = ph * prodImg.width / prodImg.height; ctx.save(); ctx.shadowColor = 'rgba(0,0,0,.25)'; ctx.shadowBlur = 30; ctx.shadowOffsetY = 14; ctx.drawImage(prodImg, W - pw - 50, H - 230 - ph, pw, ph); ctx.restore(); }
+    if (prodImg){ const ph = Math.min(520, H * .30), pw = Math.min(W * .42, ph * prodImg.width / prodImg.height), ph2 = pw * prodImg.height / prodImg.width; const bx = W - pw - 56, by0 = H - 210 - ph2; ctx.save(); ctx.fillStyle = 'rgba(0,0,0,.18)'; ctx.filter = 'blur(14px)'; ctx.beginPath(); ctx.ellipse(bx + pw / 2, by0 + ph2 - 4, pw * .42, 16, 0, 0, Math.PI * 2); ctx.fill(); ctx.restore(); ctx.save(); ctx.shadowColor = 'rgba(0,0,0,.22)'; ctx.shadowBlur = 24; ctx.shadowOffsetY = 10; ctx.drawImage(prodImg, bx, by0, pw, ph2); ctx.restore(); }
+    if (false){ const ph = 0, pw = 0; ctx.save(); ctx.shadowColor = 'rgba(0,0,0,.25)'; ctx.shadowBlur = 30; ctx.shadowOffsetY = 14; ctx.drawImage(prodImg, W - pw - 50, H - 230 - ph, pw, ph); ctx.restore(); }
     // Sticker / banda según el tipo
     const sr = 112, sx2 = W - X - sr + 10, sy2 = pTop + 40;
     if (a.kind === 'price' && a.showPrice){
@@ -794,7 +797,7 @@ Reglas:
     }
     // Íconos de beneficios
     if (a.kind === 'checks'){
-      const by = H - 380, bw = W - 2 * X; ctx.fillStyle = 'rgba(255,255,255,.88)'; rr(ctx, X, by, bw, 170, 28); ctx.fill();
+      const by = H - 380, bw = W - 2 * X - (prodImg ? W * .42 - 20 : 0); ctx.fillStyle = 'rgba(255,255,255,.88)'; rr(ctx, X, by, bw, 170, 28); ctx.fill();
       d.beneficios.slice(0, 3).forEach((b, i) => { const cx = X + bw * (i + .5) / 3; icono(ctx, cx, by + 62, i, ink); ctx.fillStyle = ink; ctx.font = `600 24px ${SANS}`; ctx.textAlign = 'center'; ctx.fillText(b.length > 22 ? b.slice(0, 21) + '…' : b, cx, by + 138); });
       ctx.textAlign = 'left';
     }
@@ -1030,7 +1033,31 @@ Reglas:
   let tmr; form.addEventListener('input', e => { if (e.target.type === 'file') return; clearTimeout(tmr); tmr = setTimeout(() => { renderStage(); renderStrip(); persist(); }, 300); });
   form.addEventListener('submit', e => e.preventDefault());
   $('#enfoques').addEventListener('change', persist);
-  $('#prodFile').addEventListener('change', e => { const f = e.target.files && e.target.files[0]; if (!f) return; const u = URL.createObjectURL(f), im = new Image(); im.onload = () => { prodImg = im; const t = $('#thumbProd'); t.src = u; t.hidden = false; renderAll(); }; im.src = u; });
+  function quitarFondo(im){
+    const max = 900, k = Math.min(1, max / Math.max(im.width, im.height)), w = Math.round(im.width * k), h = Math.round(im.height * k);
+    const c = document.createElement('canvas'); c.width = w; c.height = h; const x = c.getContext('2d'); x.drawImage(im, 0, 0, w, h);
+    const id = x.getImageData(0, 0, w, h), d = id.data, at = (px, py) => (py * w + px) * 4;
+    const corners = [[0,0],[w-1,0],[0,h-1],[w-1,h-1],[w>>1,0],[w>>1,h-1],[0,h>>1],[w-1,h>>1]].map(([px,py]) => at(px,py));
+    if (corners.some(o => d[o + 3] < 20)) return {url: c.toDataURL('image/png'), quitado: false};
+    const bg = [0,1,2].map(ch => corners.reduce((sum, o) => sum + d[o + ch], 0) / corners.length);
+    const spread = Math.max(...corners.map(o => Math.abs(d[o] - bg[0]) + Math.abs(d[o+1] - bg[1]) + Math.abs(d[o+2] - bg[2])));
+    if (spread > 90 || (bg[0] + bg[1] + bg[2]) / 3 < 170) return {url: c.toDataURL('image/png'), quitado: false};
+    const dist = o => Math.abs(d[o] - bg[0]) + Math.abs(d[o+1] - bg[1]) + Math.abs(d[o+2] - bg[2]);
+    const tol = 70, seen = new Uint8Array(w * h), stack = [];
+    for (let px = 0; px < w; px++){ stack.push(px, 0, px, h - 1); } for (let py = 0; py < h; py++){ stack.push(0, py, w - 1, py); }
+    while (stack.length){ const py = stack.pop(), px = stack.pop(); if (px < 0 || py < 0 || px >= w || py >= h) continue; const n = py * w + px; if (seen[n]) continue; const o = n * 4; if (dist(o) > tol) continue; seen[n] = 1; d[o + 3] = 0; stack.push(px + 1, py, px - 1, py, px, py + 1, px, py - 1); }
+    // borde suave
+    for (let py = 1; py < h - 1; py++) for (let px = 1; px < w - 1; px++){ const n = py * w + px; if (seen[n]) continue; if (seen[n-1] || seen[n+1] || seen[n-w] || seen[n+w]){ const o = n * 4, dd = dist(o); if (dd < tol * 2) d[o + 3] = Math.min(d[o + 3], Math.round(255 * (dd - tol) / tol)); } }
+    x.putImageData(id, 0, 0);
+    let x0 = w, y0 = h, x1 = 0, y1 = 0; for (let py = 0; py < h; py++) for (let px = 0; px < w; px++) if (d[at(px, py) + 3] > 20){ if (px < x0) x0 = px; if (px > x1) x1 = px; if (py < y0) y0 = py; if (py > y1) y1 = py; }
+    if (x1 <= x0 || y1 <= y0) return {url: c.toDataURL('image/png'), quitado: false};
+    const c2 = document.createElement('canvas'); c2.width = x1 - x0 + 1; c2.height = y1 - y0 + 1; c2.getContext('2d').drawImage(c, x0, y0, c2.width, c2.height, 0, 0, c2.width, c2.height);
+    return {url: c2.toDataURL('image/png'), quitado: true};
+  }
+  function setProd(url, aviso){ const im = new Image(); im.onload = () => { prodImg = im; const t = $('#thumbProd'); t.src = url; t.hidden = false; renderAll(); }; im.src = url; try { localStorage.setItem('ads-prod', url); } catch {} if (aviso) toast(aviso); }
+  $('#prodClear').onclick = () => { prodImg = null; $('#thumbProd').hidden = true; try { localStorage.removeItem('ads-prod'); } catch {} renderAll(); };
+  $('#prodFile').addEventListener('change', e => { const f = e.target.files && e.target.files[0]; if (!f) return; const u = URL.createObjectURL(f), im = new Image(); im.onload = () => { const r = quitarFondo(im); URL.revokeObjectURL(u); opt.pote = 'no'; renderOpts(); persist(); setProd(r.url, r.quitado ? 'Listo: le saqué el fondo blanco al producto. Tocá "Otra foto" para fotos sin pote genérico.' : 'Producto cargado. Para que quede recortado, usá una foto con fondo blanco liso o un PNG sin fondo.'); }; im.src = u; });
+  try { const pu = localStorage.getItem('ads-prod'); if (pu) setProd(pu); } catch {}
   form.logo.addEventListener('change', e => { const f = e.target.files && e.target.files[0]; if (!f) return; const u = URL.createObjectURL(f), im = new Image(); im.onload = () => { logo = im; const t = $('#thumbLogo'); t.src = u; t.hidden = false; renderAll(); }; im.src = u; });
 
   restore(); renderOpts();
